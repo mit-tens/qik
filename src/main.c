@@ -9,10 +9,41 @@
 #include "glb.h"
 #include "common.h"
 #include "error.h"
-#include "cfg.h"
+#include "cfg_t.h"
 #include "bind.h"
 #include "map.h"
 #include "rend.h"
+
+static char *initcfg = QIK_INITCFG, *initmap = QIK_INITMAP;
+
+static unsigned initw = QIK_INITW, inith = QIK_INITH;
+
+static bool use_initcfg = false, use_initmap = false, use_initscreen = false;
+
+int
+load_cfg(void)
+{
+    if (get_cfg_t(&glb_cfg_cfg_t, use_initcfg ? initcfg : QIK_INITCFG))
+	return 1;
+
+    if (use_initscreen)
+	glb_cfg.w = initw, glb_cfg.h = inith;
+    else
+	if ((! config_lookup_int(&glb_cfg_cfg_t, "w", (int *)&glb_cfg.w)) ||
+	    (! config_lookup_int(&glb_cfg_cfg_t, "h", (int *)&glb_cfg.h)))
+	    
+	    glb_cfg.w = QIK_INITW, glb_cfg.h = QIK_INITH;
+    
+    if (! config_lookup_string(&glb_cfg_cfg_t, "usr", (const char **)&glb_cfg.usr))
+	return 1;
+    
+    if (! config_lookup_string(&glb_cfg_cfg_t, "map", (const char **)&glb_cfg.map))
+	return 1;
+    
+    glb_usr.name = glb_cfg.usr;
+    
+    return 0;
+}
 
 int
 init_sdl(void)
@@ -32,36 +63,39 @@ init_sdl(void)
     return 0;
 }
 
-static char *initcfg = NULL;
-static char *initmap = NULL;
-static unsigned initw = 0;
-static unsigned inith = 0;
-
 int
 main_args(int argc, char *argv[])
 {
     for (int i = 1; i < argc; ++i) {
 	if ((strcmp(argv[i], "-c") == 0) ||
-	    (strcmp(argv[i], "--config") == 0))
+	    (strcmp(argv[i], "--config") == 0)) {
+
 	    initcfg = argv[++i];
 
+	    use_initcfg = true;
+	}
+
 	else if ((strcmp(argv[i], "-m") == 0) ||
-		 (strcmp(argv[i], "--map") == 0))
+		 (strcmp(argv[i], "--map") == 0)) {
+
 	    initmap = argv[++i];
 
+	    use_initmap = true;
+	}
+
 	else if ((strcmp(argv[i], "-s") == 0) ||
-		 (strcmp(argv[i], "--screen") == 0))
-	    inith = (unsigned)atol(argv[++i]);
+		 (strcmp(argv[i], "--screen") == 0)) {
+
+	    initw = atoi(argv[++i]);
+
+	    inith = atoi(argv[++i]);
+
+	    use_initscreen = true;
+	}
 	    
 	else
 	    return 1;
     }
-
-    if (initcfg == NULL)
-	initcfg = QIK_INITCFG;
-
-    if (initmap == NULL)
-	initmap = QIK_INITMAP;
 
     return 0;
 }
@@ -74,7 +108,7 @@ main(int argc, char *argv[])
     if (main_args(argc, argv))
 	goto usage;
 
-    if (load_cfg(&glb_cfg, &glb_usr, &glb_cfg_cfg_t, initcfg))
+    if (load_cfg())
 	goto scram;
 
     if (load_bind(&glb_bind, &glb_cfg_cfg_t))
@@ -83,7 +117,7 @@ main(int argc, char *argv[])
     if (init_sdl())
 	goto scram;
 
-    if (load_map(&glb_map, &glb_usr, &glb_mtex, &glb_mspr, &glb_map_cfg_t, initmap, glb_format))
+    if (load_map(&glb_map, &glb_usr, &glb_mtex, &glb_mspr, &glb_map_cfg_t, use_initmap ? initmap : QIK_INITMAP, glb_format))
 	goto scram;
 
     srand(time(NULL));

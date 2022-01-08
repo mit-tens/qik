@@ -6,5 +6,7 @@
 #define QIK_AUTHORS "tms"
 #define QIK_INITCFG "qik.cfg"
 #define QIK_INITMAP "assets/maps/map01.map"
+#define QIK_INITW 640
+#define QIK_INITH 480
 
 #endif
