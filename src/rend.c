@@ -17,11 +17,16 @@
 #define htid(x, y) tid(x, y).h
 #define hrid(x, y) rid(x, y).h
 
+#define drawcolor(r, c, x, y) {\
+    SDL_SetRenderDrawColor(r, c.r, c.g, c.b, SDL_ALPHA_OPAUQE);\
+    SDL_RenderDrawPoint(r, x, y);\
+}
+
 #define uxpos (unsigned)glb_usr.x_pos
 #define uypos (unsigned)glb_usr.y_pos
 
 Uint32
-rend_getpixel(const SDL_Surface *surface, const int x, const int y)
+getrawpixel(const SDL_Surface *surface, const int x, const int y)
 {
     int bpp = surface->format->BytesPerPixel;
     
@@ -54,20 +59,28 @@ rend_getpixel(const SDL_Surface *surface, const int x, const int y)
     }
 }
 
-void
-interpolate_rgb(SDL_Color *rgb, const float pwd, const SDL_Color c, const int f)
+SDL_Color
+getpixel(const SDL_Surface *real, const int x, const int y)
+{
+    SDL_Color rgb;
+
+    SDL_GetRGB(getrawpixel(real, x, y), real->format, &rgb.r, &rgb.g, &rgb.b);
+
+    return rgb;
+}
+
+SDL_Color
+interpolate_rgb(const SDL_Color rgb, const float pwd, const SDL_Color c, const int f)
 {
     float fpcnt = pwd / f;
 
     if (fpcnt > 1) fpcnt = 1;
-
-    rgb->r = (1 - fpcnt) * rgb->r + fpcnt * c.r;
-
-    rgb->g = (1 - fpcnt) * rgb->g + fpcnt * c.g;
-
-    rgb->b = (1 - fpcnt) * rgb->b + fpcnt * c.b;
-
-    return;
+	
+    return (SDL_Color) {
+	(1 - fpcnt) * rgb.r + fpcnt * c.r,
+	(1 - fpcnt) * rgb.g + fpcnt * c.g,
+	(1 - fpcnt) * rgb.b + fpcnt * c.b
+	    };
 }
 
 static float *rend_z_buffer;
@@ -124,26 +137,20 @@ rend_floor(void)
 
 	    floorY += floorStepY;
             
-	    SDL_Color rgb;
-	    
-	    SDL_GetRGB(rend_getpixel(real, texX, texY), real->format, &rgb.r, &rgb.g, &rgb.b);
+	    SDL_Color rgb = getpixel(real, texX, texY);
 
-	    SDL_SetRenderDrawColor(glb_renderer, rgb.r, rgb.g, rgb.b, SDL_ALPHA_OPAQUE);
-
-	    SDL_RenderDrawPoint(glb_renderer, x, y);
+	    drawcolor(glb_renderer, rgb, x, y)
 	    
 	    if (glb_map.cfg.ceil) {
 		real = (frid(cellX, cellY) >= glb_mtex.n) ?
 		    glb_mtex.ref[0] :
 		    glb_mtex.ref[frid(cellX, cellY)] ;
 		
-		SDL_GetRGB(rend_getpixel(real, texX, texY), real->format, &rgb.r, &rgb.g, &rgb.b);
+		rgb = getpixel(real, texX, texY);
 
 		/* symmetrical, at screenHeight - y - 1 instead of y */
-
-		SDL_SetRenderDrawColor(glb_renderer, rgb.r, rgb.g, rgb.b, SDL_ALPHA_OPAQUE);
-
-		SDL_RenderDrawPoint(glb_renderer, x, glb_cfg.h - y - 1);
+		    
+		drawcolor(glb_renderer, rgb, x, glb_cfg.h - y - 1);
 	    }
 	}
     }
@@ -263,19 +270,14 @@ rend_walls(void)
 
 		tex_pos += step;
 
-		SDL_Color rgb;
-
-		SDL_GetRGB(rend_getpixel(real, texX, texY), real->format, &rgb.r, &rgb.g, &rgb.b);
+		SDL_Color rgb = glb_map.cfg.fog ?
+		    interpolate_rgb(getpixel(real, texX, texY), perpWallDist, glb_map.fog.c, glb_map.fog.f) :
+		    getpixel(real, texX, texY);
 	    
 		if (glb_map.cfg.shadows && side)
 		    {rgb.r /= 2; rgb.g /= 2; rgb.b /= 2;}
-	    
-		if (glb_map.cfg.fog)
-		    interpolate_rgb(&rgb, perpWallDist, glb_map.fog.c, glb_map.fog.f);
 
-		SDL_SetRenderDrawColor(glb_renderer, rgb.r, rgb.g, rgb.b, SDL_ALPHA_OPAQUE);
-
-		SDL_RenderDrawPoint(glb_renderer, x, y);
+		drawcolor(glb_renderer, rgb, x, y);
 	    }
 	
 	    rend_z_buffer[x] = perpWallDist;
@@ -357,19 +359,14 @@ rend_walls(void)
 
 		tex_pos += step;
 
-		SDL_Color rgb;
-
-		SDL_GetRGB(rend_getpixel(real, texX, texY), real->format, &rgb.r, &rgb.g, &rgb.b);
+		SDL_Color rgb = glb_map.cfg.fog ?
+		    interpolate_rgb(getpixel(real, texX, texY), perpWallDist, glb_map.fog.c, glb_map.fog.f) :
+		    getpixel(real, texX, texY);
 	    
 		if (glb_map.cfg.shadows && side)
 		    {rgb.r /= 2; rgb.g /= 2; rgb.b /= 2;}
-	    
-		if (glb_map.cfg.fog)
-		    interpolate_rgb(&rgb, perpWallDist, glb_map.fog.c, glb_map.fog.f);
 
-		SDL_SetRenderDrawColor(glb_renderer, rgb.r, rgb.g, rgb.b, SDL_ALPHA_OPAQUE);
-
-		SDL_RenderDrawPoint(glb_renderer, x, y);
+		drawcolor(glb_renderer, rgb, x, y);
 	    }
 	}
     }
@@ -458,14 +455,10 @@ rend_sprites(void)
 
 		    int texY = d * real->h / spriteHeight / 256;
 
-		    SDL_Color rgb;
-
-		    SDL_GetRGB(rend_getpixel(real, texX, texY), real->format, &rgb.r, &rgb.g, &rgb.b);
+		    SDL_Color rgb = getpixel(real, texX, texY);
                 
-		    if (rgb.r != 0x00 && rgb.g != 0x00 && rgb.b != 0x00) {
-			SDL_SetRenderDrawColor(glb_renderer, rgb.r, rgb.g, rgb.b, SDL_ALPHA_OPAQUE);
-			SDL_RenderDrawPoint(glb_renderer, str, y);
-		    }
+		    if (rgb.r != 0x00 && rgb.g != 0x00 && rgb.b != 0x00)
+			    drawcolor(glb_renderer, rgb, str, y);
 		}
 	}
     }
