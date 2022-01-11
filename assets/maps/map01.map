@@ -1,6 +1,6 @@
 title = "Voile, the Magic Library";
 version = "1.0.0";
-music = "assets/sound/map01.mid";
+music = "assets/sound/";
 
 cfg =
 {
@@ -21,9 +21,9 @@ tex =
     "assets/image/darkwood_1_64.bmp",
     "assets/image/bookcase_1_64.bmp",
     "assets/image/redrug_1_64.bmp",
-    "chandelier.bmp",
-    "shrub.bmp",
-    "sword.bmp"
+    "assets/image/chandelier.bmp",
+    "assets/image/shrub.bmp",
+    "assets/image/sword.bmp"
 ];
 
 fog =
