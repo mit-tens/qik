@@ -17,15 +17,15 @@
 #define htid(x, y) tid(x, y).h
 #define hrid(x, y) rid(x, y).h
 
-#define drawcolor(r, c, x, y) {\
-    SDL_SetRenderDrawColor(r, c.r, c.g, c.b, SDL_ALPHA_OPAUQE);\
-    SDL_RenderDrawPoint(r, x, y);\
+#define drawcolor(e, c, x, y) {\
+    SDL_SetRenderDrawColor(e, c.r, c.g, c.b, SDL_ALPHA_OPAQUE);\
+    SDL_RenderDrawPoint(e, x, y);\
 }
 
 #define uxpos (unsigned)glb_usr.x_pos
 #define uypos (unsigned)glb_usr.y_pos
 
-Uint32
+static Uint32
 getrawpixel(const SDL_Surface *surface, const int x, const int y)
 {
     int bpp = surface->format->BytesPerPixel;
@@ -59,7 +59,7 @@ getrawpixel(const SDL_Surface *surface, const int x, const int y)
     }
 }
 
-SDL_Color
+static SDL_Color
 getpixel(const SDL_Surface *real, const int x, const int y)
 {
     SDL_Color rgb;
@@ -69,7 +69,7 @@ getpixel(const SDL_Surface *real, const int x, const int y)
     return rgb;
 }
 
-SDL_Color
+static SDL_Color
 interpolate_rgb(const SDL_Color rgb, const float pwd, const SDL_Color c, const int f)
 {
     float fpcnt = pwd / f;
@@ -79,14 +79,15 @@ interpolate_rgb(const SDL_Color rgb, const float pwd, const SDL_Color c, const i
     return (SDL_Color) {
 	(1 - fpcnt) * rgb.r + fpcnt * c.r,
 	(1 - fpcnt) * rgb.g + fpcnt * c.g,
-	(1 - fpcnt) * rgb.b + fpcnt * c.b
-	    };
+	(1 - fpcnt) * rgb.b + fpcnt * c.b,
+	SDL_ALPHA_OPAQUE
+    };
 }
 
 static float *rend_z_buffer;
 static float *rend_spr_dist;
 
-void
+static void
 rend_floor(void)
 {
     /* rayDir for leftmost ray (x = 0) and rightmost ray (x = glb_cfg.w) */
@@ -132,15 +133,15 @@ rend_floor(void)
 	    int texX = (int)(real->w * (floorX - cellX)) & (real->w - 1);
 
 	    int texY = (int)(real->h * (floorY - cellY)) & (real->h - 1);
-            
+	    
 	    floorX += floorStepX;
 
 	    floorY += floorStepY;
             
 	    SDL_Color rgb = getpixel(real, texX, texY);
 
-	    drawcolor(glb_renderer, rgb, x, y)
-	    
+	    drawcolor(glb_renderer, rgb, x, y);
+
 	    if (glb_map.cfg.ceil) {
 		real = (frid(cellX, cellY) >= glb_mtex.n) ?
 		    glb_mtex.ref[0] :
@@ -158,7 +159,7 @@ rend_floor(void)
     return;
 }
 
-void
+static void
 rend_walls(void)
 {
     for (unsigned x = 0; x < glb_cfg.w; ++x) {
@@ -374,7 +375,7 @@ rend_walls(void)
     return;
 }
 
-void
+static void
 rend_sprites(void)
 {
     int spriteOrder[glb_mspr.n];

@@ -14,19 +14,21 @@
 #include "map.h"
 #include "rend.h"
 
-static char *initcfg = QIK_INITCFG, *initmap = QIK_INITMAP;
+/* It's wiser to initialize these to real values instead of NULL or zero, in that they're still valid unmodified. */
+
+static char *initcfg = QIK_INITCFG, *initmap = QIK_INITMAP, *initusr = QIK_INITUSR;
 
 static unsigned initw = QIK_INITW, inith = QIK_INITH;
 
-static bool use_initcfg = false, use_initmap = false, use_initscreen = false;
+static bool use_initcfg = false, use_initmap = false, use_initusr = false, use_initscr = false;
 
-int
+static int
 load_cfg(void)
 {
     if (get_cfg_t(&glb_cfg_cfg_t, use_initcfg ? initcfg : QIK_INITCFG))
 	return 1;
 
-    if (use_initscreen)
+    if (use_initscr)
 	glb_cfg.w = initw, glb_cfg.h = inith;
     else
 	if ((! config_lookup_int(&glb_cfg_cfg_t, "w", (int *)&glb_cfg.w)) ||
@@ -34,18 +36,24 @@ load_cfg(void)
 	    
 	    glb_cfg.w = QIK_INITW, glb_cfg.h = QIK_INITH;
     
-    if (! config_lookup_string(&glb_cfg_cfg_t, "usr", (const char **)&glb_cfg.usr))
-	return 1;
-    
-    if (! config_lookup_string(&glb_cfg_cfg_t, "map", (const char **)&glb_cfg.map))
-	return 1;
-    
+    if (use_initusr)
+	glb_cfg.usr = initusr;
+    else
+	if (! config_lookup_string(&glb_cfg_cfg_t, "usr", (const char **)&glb_cfg.usr))
+	    glb_cfg.usr = QIK_INITUSR;
+
     glb_usr.name = glb_cfg.usr;
+
+    if (use_initmap)
+	glb_cfg.map = initmap;
+    else
+	if (! config_lookup_string(&glb_cfg_cfg_t, "map", (const char **)&glb_cfg.map))
+	    glb_cfg.map = QIK_INITMAP;
     
     return 0;
 }
 
-int
+static int
 init_sdl(void)
 {
     if (SDL_Init(SDL_INIT_VIDEO))
@@ -63,34 +71,34 @@ init_sdl(void)
     return 0;
 }
 
-int
+static int
 main_args(int argc, char *argv[])
 {
     for (int i = 1; i < argc; ++i) {
-	if ((strcmp(argv[i], "-c") == 0) ||
-	    (strcmp(argv[i], "--config") == 0)) {
-
+	if ((strcmp(argv[i], "-cfg") == 0)) {
 	    initcfg = argv[++i];
 
 	    use_initcfg = true;
 	}
 
-	else if ((strcmp(argv[i], "-m") == 0) ||
-		 (strcmp(argv[i], "--map") == 0)) {
-
+	else if ((strcmp(argv[i], "-map") == 0)) {
 	    initmap = argv[++i];
 
 	    use_initmap = true;
 	}
 
-	else if ((strcmp(argv[i], "-s") == 0) ||
-		 (strcmp(argv[i], "--screen") == 0)) {
-
+	else if ((strcmp(argv[i], "-scr") == 0)) {
 	    initw = atoi(argv[++i]);
 
 	    inith = atoi(argv[++i]);
 
-	    use_initscreen = true;
+	    use_initscr = true;
+	}
+
+	else if ((strcmp(argv[i], "-usr") == 0)) {
+	    initusr = argv[++i];
+
+	    use_initusr = true;
 	}
 	    
 	else
@@ -117,7 +125,7 @@ main(int argc, char *argv[])
     if (init_sdl())
 	goto scram;
 
-    if (load_map(&glb_map, &glb_usr, &glb_mtex, &glb_mspr, &glb_map_cfg_t, use_initmap ? initmap : QIK_INITMAP, glb_format))
+    if (load_map(&glb_map, &glb_usr, &glb_mtex, &glb_mspr, &glb_map_cfg_t, glb_cfg.map, glb_format))
 	goto scram;
 
     srand(time(NULL));
@@ -142,10 +150,11 @@ scram:
 
 usage:
     fprintf(stderr, "usage: qik [options ..]\n");
-    fprintf(stderr, "-c, --config       <file>    Use config file\n");
-    fprintf(stderr, "-m, --map          <file>    Load to map file\n");
-    fprintf(stderr, "-s, --screen       <w> <h>   Override screen size\n");
-    fprintf(stderr, "-f, --fhqwhgads              You are here\n");
+    fprintf(stderr, "-cfg       <file>    Use config file\n");
+    fprintf(stderr, "-map       <file>    Load to map file\n");
+    fprintf(stderr, "-scr       <w> <h>   Override screen size\n");
+    fprintf(stderr, "-usr       <string>  Username for player\n"); 
+    fprintf(stderr, "-fhqwhgads           You are here\n");
 
     return EXIT_FAILURE;
 }

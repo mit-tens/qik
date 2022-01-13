@@ -76,7 +76,7 @@ static const Key Keylist[] =
     {"ESCAPE", SDL_SCANCODE_ESCAPE}
 };
 
-int
+static int
 lookup_bind(const config_t *cfg_t, const char *str, SDL_Scancode *n) {
     char *tmp;
 
