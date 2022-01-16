@@ -191,185 +191,105 @@ rend_walls(void)
 
 	/* Length of ray from current position to next X or Y side */
 	
-	float sdx = (rayDirX < 0) ?
+	float sideDistX = (rayDirX < 0) ?
 	    (glb_usr.x_pos - uxpos) * deltaDistX :
 	    (uxpos + 1.00 - glb_usr.x_pos) * deltaDistX ;
 
-	float sdy = (rayDirY < 0) ?
+	float sideDistY = (rayDirY < 0) ?
 	    (glb_usr.y_pos - uypos) * deltaDistY :
 	    (uypos + 1.00 - glb_usr.y_pos) * deltaDistY ;
 
-	if (glb_map.cfg.tile) {
-	    unsigned mapX = uxpos;
+	unsigned mapX = uxpos;
 	    
-	    unsigned mapY = uypos;
+	unsigned mapY = uypos;
 
-	    float sideDistX = sdx;
+	/* Jump to next grid square, OR in X direction, OR in Y direction */
+
+	/* tswitch flags which of the two map sections were hit */
+
+	/* tile = 1; roof = -1; */
 	    
-	    float sideDistY = sdy;
+	char tswitch = 0;
 
-	    /* Jump to next grid square, OR in X direction, OR in Y direction */
+	bool side = false;
 	
-	    bool hit = false, side = false;
-	
-	    while (!hit) {
-		if (sideDistX < sideDistY) {
-		    sideDistX += deltaDistX;
+	while (!tswitch) {
+	    if (sideDistX < sideDistY) {
+		sideDistX += deltaDistX;
 
-		    mapX += stepX;
+		mapX += stepX;
 
-		    side = false;
-		}
-		else {
-		    sideDistY += deltaDistY;
+		side = false;
+	    }
+	    else {
+		sideDistY += deltaDistY;
 
-		    mapY += stepY;
+		mapY += stepY;
 
-		    side = true;
-		}
-	    
+		side = true;
+	    }
+
+	    if (glb_map.cfg.tile)
 		if (wtid(mapX, mapY))
-		    hit = true;
-	    }
-	    
-	    /* Calculate distance projected on camera direction */
+		    tswitch = 1;
 
-	    float perpWallDist = (!side) ?
-		sideDistX - deltaDistX :
-		sideDistY - deltaDistY ;
-
-	    /* Calculate lowest and highest pixel to fill in current stripe */
-	
-	    unsigned lineHeight = (unsigned)(glb_cfg.h / perpWallDist);
-
-	    unsigned drawStart = (-lineHeight + glb_cfg.h) / 2;
-
-	    if (drawStart > glb_cfg.h) drawStart = 0;
-	
-	    unsigned drawEnd = (lineHeight + glb_cfg.h) / 2;
-
-	    if (drawEnd > glb_cfg.h) drawEnd = glb_cfg.h;
-		
-	    float wallX = (!side) ?
-		glb_usr.y_pos + perpWallDist * rayDirY :
-		glb_usr.x_pos + perpWallDist * rayDirX ;
-
-	    wallX -= floor(wallX);
-
-	    SDL_Surface *real = getmtex(wtid(mapX, mapY));
-
-	    int texX = (int)(wallX * (float)real->w);
-
-	    if ((side == 0 && rayDirX > 0) ||
-		(side == 1 && rayDirY < 0))
-		texX = real->w - texX - 1;
-
-	    float step = 1.00 * real->h / lineHeight;
-
-	    float tex_pos = (drawStart - glb_cfg.h / 2 + lineHeight / 2) * step;
-
-	    for (unsigned y = drawStart; y < drawEnd; ++y) {
-		int texY = (int)tex_pos & (real->h - 1);
-
-		tex_pos += step;
-
-		SDL_Color rgb = glb_map.cfg.fog ?
-		    interpolate_rgb(getpixel(real, texX, texY), perpWallDist, glb_map.fog.c, glb_map.fog.f) :
-		    getpixel(real, texX, texY);
-	    
-		if (glb_map.cfg.shadows && side)
-		    {rgb.r /= 2; rgb.g /= 2; rgb.b /= 2;}
-
-		drawpixel(glb_renderer, rgb, x, y);
-	    }
-	
-	    rend_z_buffer[x] = perpWallDist;
-	}
-
-	if (glb_map.cfg.roof) {
-	    unsigned mapX = uxpos;
-	    
-	    unsigned mapY = uypos;
-
-	    float sideDistX = sdx;
-	    
-	    float sideDistY = sdy;
-
-	    /* Jump to next grid square, OR in X direction, OR in Y direction */
-	
-	    bool hit = false, side = false;
-	
-	    while (!hit) {
-		if (sideDistX < sideDistY) {
-		    sideDistX += deltaDistX;
-
-		    mapX += stepX;
-
-		    side = false;
-		}
-		else {
-		    sideDistY += deltaDistY;
-
-		    mapY += stepY;
-
-		    side = true;
-		}
-	    
+	    if (glb_map.cfg.roof)
 		if (wrid(mapX, mapY))
-		    hit = true;
-	    }
-	    
-	    /* Calculate distance projected on camera direction */
-
-	    float perpWallDist = (!side) ?
-		sideDistX - deltaDistX :
-		sideDistY - deltaDistY ;
-
-	    /* Calculate lowest and highest pixel to fill in current stripe */
-	
-	    unsigned lineHeight = (unsigned)(glb_cfg.h / perpWallDist);
-
-	    unsigned drawStart = (-lineHeight + glb_cfg.h) / 2;
-
-	    if (drawStart > glb_cfg.h) drawStart = 0;
-	
-	    unsigned drawEnd = (lineHeight + glb_cfg.h) / 2;
-
-	    if (drawEnd > glb_cfg.h) drawEnd = glb_cfg.h;
-		
-	    float wallX = (!side) ?
-		glb_usr.y_pos + perpWallDist * rayDirY :
-		glb_usr.x_pos + perpWallDist * rayDirX ;
-
-	    wallX -= floor(wallX);
-
-	    SDL_Surface *real = getmtex(wrid(mapX, mapY));
-
-	    int texX = (int)(wallX * (float)real->w);
-
-	    if ((side == 0 && rayDirX > 0) ||
-		(side == 1 && rayDirY < 0))
-		texX = real->w - texX - 1;
-
-	    float step = 1.00 * real->h / lineHeight;
-
-	    float tex_pos = (drawStart - glb_cfg.h / 2 + lineHeight / 2) * step;
-
-	    for (unsigned y = drawStart; y < drawEnd; ++y) {
-		int texY = (int)tex_pos & (real->h - 1);
-
-		tex_pos += step;
-
-		SDL_Color rgb = glb_map.cfg.fog ?
-		    interpolate_rgb(getpixel(real, texX, texY), perpWallDist, glb_map.fog.c, glb_map.fog.f) :
-		    getpixel(real, texX, texY);
-	    
-		if (glb_map.cfg.shadows && side)
-		    {rgb.r /= 2; rgb.g /= 2; rgb.b /= 2;}
-
-		drawpixel(glb_renderer, rgb, x, y);
-	    }
+		    tswitch = -1;
 	}
+	    
+	/* Calculate distance projected on camera direction */
+
+	float perpWallDist = (!side) ?
+	    sideDistX - deltaDistX :
+	    sideDistY - deltaDistY ;
+
+	/* Calculate lowest and highest pixel to fill in current stripe */
+	
+	unsigned lineHeight = (unsigned)(glb_cfg.h / perpWallDist);
+
+	unsigned drawStart = (-lineHeight + glb_cfg.h) / 2;
+
+	if (drawStart > glb_cfg.h) drawStart = 0;
+	
+	unsigned drawEnd = (lineHeight + glb_cfg.h) / 2;
+
+	if (drawEnd > glb_cfg.h) drawEnd = glb_cfg.h;
+		
+	float wallX = (!side) ?
+	    glb_usr.y_pos + perpWallDist * rayDirY :
+	    glb_usr.x_pos + perpWallDist * rayDirX ;
+
+	wallX -= floor(wallX);
+
+	SDL_Surface *real = getmtex(tswitch > 0 ? wtid(mapX, mapY) : wrid(mapX, mapY));
+
+	int texX = (int)(wallX * (float)real->w);
+
+	if ((side == 0 && rayDirX > 0) ||
+	    (side == 1 && rayDirY < 0))
+	    texX = real->w - texX - 1;
+
+	float step = 1.00 * real->h / lineHeight;
+
+	float tex_pos = (drawStart - glb_cfg.h / 2 + lineHeight / 2) * step;
+
+	for (unsigned y = drawStart; y < drawEnd; ++y) {
+	    int texY = (int)tex_pos & (real->h - 1);
+
+	    tex_pos += step;
+
+	    SDL_Color rgb = glb_map.cfg.fog ?
+		interpolate_rgb(getpixel(real, texX, texY), perpWallDist, glb_map.fog.c, glb_map.fog.f) :
+		getpixel(real, texX, texY);
+	    
+	    if (glb_map.cfg.shadows && side)
+		{rgb.r /= 2; rgb.g /= 2; rgb.b /= 2;}
+
+	    drawpixel(glb_renderer, rgb, x, y);
+	}
+	
+	rend_z_buffer[x] = perpWallDist;
     }
 
     return;
