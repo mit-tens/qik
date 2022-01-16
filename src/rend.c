@@ -17,7 +17,7 @@
 #define htid(x, y) tid(x, y).h
 #define hrid(x, y) rid(x, y).h
 
-#define drawcolor(e, c, x, y) {\
+#define drawpixel(e, c, x, y) {\
     SDL_SetRenderDrawColor(e, c.r, c.g, c.b, SDL_ALPHA_OPAQUE);\
     SDL_RenderDrawPoint(e, x, y);\
 }
@@ -84,6 +84,14 @@ interpolate_rgb(const SDL_Color rgb, const float pwd, const SDL_Color c, const i
     };
 }
 
+static SDL_Surface *
+getmtex(const unsigned id)
+{
+    return (id >= glb_mtex.n) ?
+	glb_mtex.ref[0] :
+	glb_mtex.ref[id] ;
+}
+
 static float *rend_z_buffer;
 static float *rend_spr_dist;
 
@@ -124,10 +132,8 @@ rend_floor(void)
 
 	    int cellY = (int)floorY;
 
-	    SDL_Surface *real = (ftid(cellX, cellY) >= glb_mtex.n) ?
-		glb_mtex.ref[0] :
-		glb_mtex.ref[ftid(cellX, cellY)] ;
-            
+	    SDL_Surface *real = getmtex(ftid(cellX, cellY));
+	    
 	    /* get the texture coordinate from the fractional part */
 
 	    int texX = (int)(real->w * (floorX - cellX)) & (real->w - 1);
@@ -140,18 +146,16 @@ rend_floor(void)
             
 	    SDL_Color rgb = getpixel(real, texX, texY);
 
-	    drawcolor(glb_renderer, rgb, x, y);
+	    drawpixel(glb_renderer, rgb, x, y);
 
 	    if (glb_map.cfg.ceil) {
-		real = (frid(cellX, cellY) >= glb_mtex.n) ?
-		    glb_mtex.ref[0] :
-		    glb_mtex.ref[frid(cellX, cellY)] ;
+		real = getmtex(frid(cellX, cellY));
 		
 		rgb = getpixel(real, texX, texY);
 
 		/* symmetrical, at screenHeight - y - 1 instead of y */
 		    
-		drawcolor(glb_renderer, rgb, x, glb_cfg.h - y - 1);
+		drawpixel(glb_renderer, rgb, x, glb_cfg.h - y - 1);
 	    }
 	}
     }
@@ -252,10 +256,8 @@ rend_walls(void)
 
 	    wallX -= floor(wallX);
 
-	    SDL_Surface *real = (wtid(mapX, mapY) >= glb_mtex.n) ?
-		glb_mtex.ref[0] :
-		glb_mtex.ref[wtid(mapX, mapY)] ;
-	
+	    SDL_Surface *real = getmtex(wtid(mapX, mapY));
+
 	    int texX = (int)(wallX * (float)real->w);
 
 	    if ((side == 0 && rayDirX > 0) ||
@@ -278,7 +280,7 @@ rend_walls(void)
 		if (glb_map.cfg.shadows && side)
 		    {rgb.r /= 2; rgb.g /= 2; rgb.b /= 2;}
 
-		drawcolor(glb_renderer, rgb, x, y);
+		drawpixel(glb_renderer, rgb, x, y);
 	    }
 	
 	    rend_z_buffer[x] = perpWallDist;
@@ -341,10 +343,8 @@ rend_walls(void)
 
 	    wallX -= floor(wallX);
 
-	    SDL_Surface *real = (wrid(mapX, mapY) >= glb_mtex.n) ?
-		glb_mtex.ref[0] :
-		glb_mtex.ref[wrid(mapX, mapY)] ;
-	
+	    SDL_Surface *real = getmtex(wrid(mapX, mapY));
+
 	    int texX = (int)(wallX * (float)real->w);
 
 	    if ((side == 0 && rayDirX > 0) ||
@@ -367,7 +367,7 @@ rend_walls(void)
 		if (glb_map.cfg.shadows && side)
 		    {rgb.r /= 2; rgb.g /= 2; rgb.b /= 2;}
 
-		drawcolor(glb_renderer, rgb, x, y);
+		drawpixel(glb_renderer, rgb, x, y);
 	    }
 	}
     }
@@ -433,10 +433,8 @@ rend_sprites(void)
 	int drawEndX = spriteWidth / 2 + spriteScreenX;
 
 	if (drawEndX >= (int)glb_cfg.w) drawEndX = glb_cfg.w;
-        
-	SDL_Surface *real = (glb_mspr.ref[spriteOrder[i]].tex >= glb_mtex.n) ?
-	    glb_mtex.ref[0] :
-	    glb_mtex.ref[glb_mspr.ref[spriteOrder[i]].tex] ;
+
+	SDL_Surface *real = getmtex(glb_mspr.ref[spriteOrder[i]].tex);
         
 	for (int str = drawStartX; str < drawEndX; ++str) {
 	    int texX = (int)(256 * (str - (-spriteWidth / 2 + spriteScreenX)) * real->w / spriteWidth) / 256;
@@ -459,7 +457,7 @@ rend_sprites(void)
 		    SDL_Color rgb = getpixel(real, texX, texY);
                 
 		    if (rgb.r != 0x00 && rgb.g != 0x00 && rgb.b != 0x00)
-			    drawcolor(glb_renderer, rgb, str, y);
+			drawpixel(glb_renderer, rgb, str, y);
 		}
 	}
     }
