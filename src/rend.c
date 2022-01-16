@@ -69,22 +69,18 @@ getpixel(const SDL_Surface *real, const int x, const int y)
     return rgb;
 }
 
-static SDL_Color
-interpolate_rgb(const SDL_Color rgb, const float pwd, const SDL_Color c, const int f)
+static inline SDL_Color
+interpolate_rgb(const SDL_Color rgb, const SDL_Color c, const float fpcnt) /* Here fpcnt should be perpWallDist / fog.f */
 {
-    float fpcnt = pwd / f;
-
-    if (fpcnt > 1) fpcnt = 1;
-	
     return (SDL_Color) {
-	(1 - fpcnt) * rgb.r + fpcnt * c.r,
-	(1 - fpcnt) * rgb.g + fpcnt * c.g,
-	(1 - fpcnt) * rgb.b + fpcnt * c.b,
+	(1 - (fpcnt > 1) ? 1 : fpcnt) * rgb.r + fpcnt * c.r,
+	(1 - (fpcnt > 1) ? 1 : fpcnt) * rgb.g + fpcnt * c.g,
+	(1 - (fpcnt > 1) ? 1 : fpcnt) * rgb.b + fpcnt * c.b,
 	SDL_ALPHA_OPAQUE
     };
 }
 
-static SDL_Surface *
+static inline SDL_Surface *
 getmtex(const unsigned id)
 {
     return (id >= glb_mtex.n) ?
@@ -280,7 +276,7 @@ rend_walls(void)
 	    tex_pos += step;
 
 	    SDL_Color rgb = glb_map.cfg.fog ?
-		interpolate_rgb(getpixel(real, texX, texY), perpWallDist, glb_map.fog.c, glb_map.fog.f) :
+		interpolate_rgb(getpixel(real, texX, texY), glb_map.fog.c, perpWallDist / glb_map.fog.f) :
 		getpixel(real, texX, texY);
 	    
 	    if (glb_map.cfg.shadows && side)
