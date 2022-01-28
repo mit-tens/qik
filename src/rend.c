@@ -17,11 +17,6 @@
 #define htid(x, y) tid(x, y).h
 #define hrid(x, y) rid(x, y).h
 
-#define drawpixel(e, c, x, y) {\
-    SDL_SetRenderDrawColor(e, c.r, c.g, c.b, SDL_ALPHA_OPAQUE);\
-    SDL_RenderDrawPoint(e, x, y);\
-}
-
 #define uxpos (unsigned)glb_usr.x_pos
 #define uypos (unsigned)glb_usr.y_pos
 
@@ -60,13 +55,23 @@ getrawpixel(const SDL_Surface *surface, const int x, const int y)
 }
 
 static SDL_Color
-getpixel(const SDL_Surface *real, const int x, const int y)
+getpixel(const SDL_Surface *surface, const int x, const int y)
 {
     SDL_Color rgb;
 
-    SDL_GetRGB(getrawpixel(real, x, y), real->format, &rgb.r, &rgb.g, &rgb.b);
+    SDL_GetRGB(getrawpixel(surface, x, y), surface->format, &rgb.r, &rgb.g, &rgb.b);
 
     return rgb;
+}
+
+static void
+drawpixel(SDL_Renderer *renderer, const SDL_Color color, const unsigned x, const unsigned y)
+{
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, SDL_ALPHA_OPAQUE);
+
+    SDL_RenderDrawPoint(renderer, x, y);
+
+    return;
 }
 
 static inline SDL_Color
@@ -90,6 +95,16 @@ getmtex(const unsigned id)
 
 static float *rend_z_buffer;
 static float *rend_spr_dist;
+
+static void
+alloc_buffers(void)
+{
+    rend_z_buffer = malloc(glb_cfg.w * sizeof(float));
+
+    rend_spr_dist = malloc(glb_mspr.n * sizeof(float));
+
+    return;
+}
 
 static void
 rend_floor(void)
@@ -264,6 +279,7 @@ rend_walls(void)
 
 	if ((side == 0 && rayDirX > 0) ||
 	    (side == 1 && rayDirY < 0))
+	    
 	    texX = real->w - texX - 1;
 
 	float step = 1.00 * real->h / lineHeight;
@@ -316,17 +332,17 @@ rend_sprites(void)
 
 	/* Transform sprite with inverse camera matrix */
 
-	float invDet = 1.00 / (glb_usr.x_plane * glb_usr.y_dir - glb_usr.x_dir * glb_usr.y_plane); //Required for correct matrix multiplicaton
+	float invDet = 1.00 / (glb_usr.x_plane * glb_usr.y_dir - glb_usr.x_dir * glb_usr.y_plane); /* Required for correct matrix multiplicaton */
 
 	float transformX = invDet * (glb_usr.y_dir * spriteX - glb_usr.x_dir * spriteY);
 
-	float transformY = invDet * (-glb_usr.y_plane * spriteX + glb_usr.x_plane * spriteY); //The depth inside the screen, Z in 3D
+	float transformY = invDet * (-glb_usr.y_plane * spriteX + glb_usr.x_plane * spriteY); /* The depth inside the screen, Z in 3D */
         
 	int spriteScreenX = (int)((glb_cfg.w / 2) * (1 + transformX / transformY));
         
 	/* Calcluate height of sprite on screen */
 
-	int spriteHeight = abs((int)(glb_cfg.h / transformY)); //Using transformY instead of real distance negates fisheye
+	int spriteHeight = abs((int)(glb_cfg.h / transformY)); /* Using transformY instead of real distance negates fisheye */
 
 	/* Calculate lowest and highest pixel to fill in stripe */
 
@@ -386,13 +402,8 @@ get_rend(void)
 {
     static bool mal = false;
 
-    if (!mal) {
-	rend_z_buffer = malloc(glb_cfg.w * sizeof(float));
-
-	rend_spr_dist = malloc(glb_mspr.n * sizeof(float));
-
-	mal = true;
-    }
+    if (!mal)
+	alloc_buffers();
     
     SDL_RenderClear(glb_renderer);
     
