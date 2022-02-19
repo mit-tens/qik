@@ -10,7 +10,7 @@ SDL_Renderer *glb_renderer;
 SDL_Window *glb_window;
 Uint32 glb_format;
 
-float glb_time, glb_time_old, glb_time_frame;
+double glb_time, glb_time_old, glb_time_frame;
 
 qik_bind glb_bind;
 qik_mtex glb_mtex;

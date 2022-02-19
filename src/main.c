@@ -58,10 +58,10 @@ init_sdl(void)
 {
     if (SDL_Init(SDL_INIT_VIDEO))
 	return 1;
-    
-    if ((glb_window = SDL_CreateWindow("Qik", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, glb_cfg.w, glb_cfg.h, 0)) == NULL)
+
+    if ((glb_window = SDL_CreateWindow(QIK_VERSION, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, glb_cfg.w, glb_cfg.h, 0)) == NULL)
 	return 1;
-                              
+    
     if ((glb_format = SDL_GetWindowPixelFormat(glb_window)) == SDL_PIXELFORMAT_UNKNOWN)
 	return 1;
 
@@ -111,7 +111,7 @@ main_args(int argc, char *argv[])
 int
 main(int argc, char *argv[])
 {
-    fprintf(stderr, "Qik %s\nCopyright %s %s\n", QIK_VERSION, QIK_CPYYEAR, QIK_AUTHORS);
+    fprintf(stderr, "%s\nCopyright %s %s\n", QIK_VERSION, QIK_CPYYEAR, QIK_AUTHORS);
     
     if (main_args(argc, argv))
 	goto usage;

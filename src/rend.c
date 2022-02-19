@@ -75,7 +75,7 @@ drawpixel(SDL_Renderer *renderer, const SDL_Color color, const unsigned x, const
 }
 
 static inline SDL_Color
-interpolate_rgb(const SDL_Color rgb, const SDL_Color c, const float fpcnt) /* Here fpcnt should be perpWallDist / fog.f */
+interpolate_rgb(const SDL_Color rgb, const SDL_Color c, const double fpcnt) /* Here fpcnt should be perpWallDist / fog.f */
 {
     return (SDL_Color) {
 	(1 - (fpcnt > 1) ? 1 : fpcnt) * rgb.r + fpcnt * c.r,
@@ -93,15 +93,21 @@ getmtex(const unsigned id)
 	glb_mtex.ref[id] ;
 }
 
-static float *rend_z_buffer;
-static float *rend_spr_dist;
+static double *rend_z_buffer = NULL;
+static double *rend_spr_dist = NULL;
 
-static void
-alloc_buffers(void)
+static inline void
+alloc_rend_z_buffer(void)
 {
-    rend_z_buffer = malloc(glb_cfg.w * sizeof(float));
+    rend_z_buffer = malloc(glb_cfg.w * sizeof(double));
 
-    rend_spr_dist = malloc(glb_mspr.n * sizeof(float));
+    return;
+}
+
+static inline void
+alloc_rend_spr_dist(void)
+{
+    rend_spr_dist = malloc(glb_mspr.n * sizeof(double));
 
     return;
 }
@@ -111,32 +117,32 @@ rend_floor(void)
 {
     /* rayDir for leftmost ray (x = 0) and rightmost ray (x = glb_cfg.w) */
 
-    float rayDirX0 = glb_usr.x_dir - glb_usr.x_plane;
+    double rayDirX0 = glb_usr.x_dir - glb_usr.x_plane;
 
-    float rayDirY0 = glb_usr.y_dir - glb_usr.y_plane;
+    double rayDirY0 = glb_usr.y_dir - glb_usr.y_plane;
 
-    float rayDirX1 = glb_usr.x_dir + glb_usr.x_plane;
+    double rayDirX1 = glb_usr.x_dir + glb_usr.x_plane;
 
-    float rayDirY1 = glb_usr.y_dir + glb_usr.y_plane;
+    double rayDirY1 = glb_usr.y_dir + glb_usr.y_plane;
     
     for (unsigned y = 0; y < glb_cfg.h; ++y) {		
 	/* Horizontal distance from the camera to the floor for the current row. */
 	/* 0.5 is the z position exactly in the middle between floor and ceiling. */
 
-	float rowDistance = glb_usr.z_pos / (y - glb_usr.z_pos);
+	double rowDistance = glb_usr.z_pos / (y - glb_usr.z_pos);
 	
 	/* Calculate the real world step vector we have to add for each x (parallel to camera plane) */
 	/* Adding step by step avoids multiplications with a weight in the inner loop */
 
-	float floorStepX = rowDistance * (rayDirX1 - rayDirX0) / glb_cfg.w;
+	double floorStepX = rowDistance * (rayDirX1 - rayDirX0) / glb_cfg.w;
 
-	float floorStepY = rowDistance * (rayDirY1 - rayDirY0) / glb_cfg.w;
+	double floorStepY = rowDistance * (rayDirY1 - rayDirY0) / glb_cfg.w;
 		
 	/* Real world coordinates of the leftmost column. This will be updated as we step to the right. */
 
-	float floorX = glb_usr.x_pos + rowDistance * rayDirX0;
+	double floorX = glb_usr.x_pos + rowDistance * rayDirX0;
 
-	float floorY = glb_usr.y_pos + rowDistance * rayDirY0;
+	double floorY = glb_usr.y_pos + rowDistance * rayDirY0;
 		
 	for (unsigned x = 0; x < glb_cfg.w; ++x) {
 	    int cellX = (int)floorX;
@@ -178,35 +184,35 @@ static void
 rend_walls(void)
 {
     for (unsigned x = 0; x < glb_cfg.w; ++x) {
-	float cameraX = 2 * x / (float)glb_cfg.w - 1;
+	double cameraX = 2 * x / (float)glb_cfg.w - 1;
 
-	float rayDirX = glb_usr.x_dir + glb_usr.x_plane * cameraX;
+	double rayDirX = glb_usr.x_dir + glb_usr.x_plane * cameraX;
 
-	float rayDirY = glb_usr.y_dir + glb_usr.y_plane * cameraX;
+	double rayDirY = glb_usr.y_dir + glb_usr.y_plane * cameraX;
 	
 	/* Length of ray from one X or Y side to next X or Y side */
 
-	float deltaDistX = fabs(1 / rayDirX);
+	double deltaDistX = fabs(1 / rayDirX);
 
-	float deltaDistY = fabs(1 / rayDirY);
+	double deltaDistY = fabs(1 / rayDirY);
 
 	/* What direction to step in X or Y direction (either +1 or -1) */
 
-	char stepX = (rayDirX < 0) ?
+	int stepX = (rayDirX < 0) ?
 	    -1 :
 	    1 ;
 
-	char stepY = (rayDirY < 0) ?
+	int stepY = (rayDirY < 0) ?
 	    -1 :
 	    1 ;
 
 	/* Length of ray from current position to next X or Y side */
 	
-	float sideDistX = (rayDirX < 0) ?
+	double sideDistX = (rayDirX < 0) ?
 	    (glb_usr.x_pos - uxpos) * deltaDistX :
 	    (uxpos + 1.00 - glb_usr.x_pos) * deltaDistX ;
 
-	float sideDistY = (rayDirY < 0) ?
+	double sideDistY = (rayDirY < 0) ?
 	    (glb_usr.y_pos - uypos) * deltaDistY :
 	    (uypos + 1.00 - glb_usr.y_pos) * deltaDistY ;
 
@@ -219,8 +225,8 @@ rend_walls(void)
 	/* tswitch flags which of the two map sections were hit */
 
 	/* tile = 1; roof = -1; */
-	    
-	char tswitch = 0;
+
+	int tswitch = 0;
 
 	bool side = false;
 	
@@ -251,7 +257,7 @@ rend_walls(void)
 	    
 	/* Calculate distance projected on camera direction */
 
-	float perpWallDist = (!side) ?
+	double perpWallDist = (!side) ?
 	    sideDistX - deltaDistX :
 	    sideDistY - deltaDistY ;
 
@@ -267,7 +273,7 @@ rend_walls(void)
 
 	if (drawEnd > glb_cfg.h) drawEnd = glb_cfg.h;
 		
-	float wallX = (!side) ?
+	double wallX = (!side) ?
 	    glb_usr.y_pos + perpWallDist * rayDirY :
 	    glb_usr.x_pos + perpWallDist * rayDirX ;
 
@@ -275,16 +281,16 @@ rend_walls(void)
 
 	SDL_Surface *real = getmtex(tswitch > 0 ? wtid(mapX, mapY) : wrid(mapX, mapY));
 
-	int texX = (int)(wallX * (float)real->w);
+	int texX = (int)(wallX * (double)real->w);
 
 	if ((side == 0 && rayDirX > 0) ||
 	    (side == 1 && rayDirY < 0))
 	    
 	    texX = real->w - texX - 1;
 
-	float step = 1.00 * real->h / lineHeight;
+	double step = 1.00 * real->h / lineHeight;
 
-	float tex_pos = (drawStart - glb_cfg.h / 2 + lineHeight / 2) * step;
+	double tex_pos = (drawStart - glb_cfg.h / 2 + lineHeight / 2) * step;
 
 	for (unsigned y = drawStart; y < drawEnd; ++y) {
 	    int texY = (int)tex_pos & (real->h - 1);
@@ -293,7 +299,7 @@ rend_walls(void)
 
 	    SDL_Color rgb = glb_map.cfg.fog ?
 		interpolate_rgb(getpixel(real, texX, texY), glb_map.fog.c, perpWallDist / glb_map.fog.f) :
-		getpixel(real, texX, texY);
+		getpixel(real, texX, texY) ;
 	    
 	    if (glb_map.cfg.shadows && side)
 		{rgb.r /= 2; rgb.g /= 2; rgb.b /= 2;}
@@ -326,17 +332,17 @@ rend_sprites(void)
     for (unsigned i = 0; i < glb_mspr.n; ++i) {
 	/* Translate sprite position relative to camera */
 
-	float spriteX = glb_mspr.ref[spriteOrder[i]].x - glb_usr.x_pos;
+	double spriteX = glb_mspr.ref[spriteOrder[i]].x - glb_usr.x_pos;
 
-	float spriteY = glb_mspr.ref[spriteOrder[i]].y - glb_usr.y_pos;
+	double spriteY = glb_mspr.ref[spriteOrder[i]].y - glb_usr.y_pos;
 
 	/* Transform sprite with inverse camera matrix */
 
-	float invDet = 1.00 / (glb_usr.x_plane * glb_usr.y_dir - glb_usr.x_dir * glb_usr.y_plane); /* Required for correct matrix multiplicaton */
+	double invDet = 1.00 / (glb_usr.x_plane * glb_usr.y_dir - glb_usr.x_dir * glb_usr.y_plane); /* Required for correct matrix multiplicaton */
 
-	float transformX = invDet * (glb_usr.y_dir * spriteX - glb_usr.x_dir * spriteY);
+	double transformX = invDet * (glb_usr.y_dir * spriteX - glb_usr.x_dir * spriteY);
 
-	float transformY = invDet * (-glb_usr.y_plane * spriteX + glb_usr.x_plane * spriteY); /* The depth inside the screen, Z in 3D */
+	double transformY = invDet * (-glb_usr.y_plane * spriteX + glb_usr.x_plane * spriteY); /* The depth inside the screen, Z in 3D */
         
 	int spriteScreenX = (int)((glb_cfg.w / 2) * (1 + transformX / transformY));
         
@@ -382,7 +388,7 @@ rend_sprites(void)
 		&& str < (int)glb_cfg.w
 		&& transformY < rend_z_buffer[str])
 		for (int y = drawStartY; y < drawEndY; ++y) {
-		    int d = y * 256 - glb_cfg.h * 128 + spriteHeight * 128; //256 and 128 factors to avoid floats
+		    int d = y * 256 - glb_cfg.h * 128 + spriteHeight * 128; //256 and 128 factors to avoid doubles
 
 		    int texY = d * real->h / spriteHeight / 256;
 
@@ -400,10 +406,11 @@ rend_sprites(void)
 void
 get_rend(void)
 {
-    static bool mal = false;
+    if (rend_z_buffer == NULL)
+	alloc_rend_z_buffer();
 
-    if (!mal)
-	alloc_buffers();
+    if (rend_spr_dist == NULL)
+	alloc_rend_spr_dist();
     
     SDL_RenderClear(glb_renderer);
     

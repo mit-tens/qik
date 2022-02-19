@@ -7,7 +7,7 @@ extern SDL_Renderer *glb_renderer;
 extern SDL_Window *glb_window;
 extern Uint32 glb_format;
 
-extern float glb_time, glb_time_old, glb_time_frame;
+extern double glb_time, glb_time_old, glb_time_frame;
 
 extern qik_bind glb_bind;
 extern qik_mtex glb_mtex;

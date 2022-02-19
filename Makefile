@@ -27,4 +27,4 @@ clean:
 	rm $(EXE) $(OBJ_DIR)/*.o
 
 maid:
-	rm *~ $(SRC_DIR)/*~ $(INC_DIR)/*~
+	rm ./*~ */*~

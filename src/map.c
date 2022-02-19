@@ -8,19 +8,6 @@
 #include "load.h"
 #include "map.h"
 
-static float
-lookup_float(const config_t *cfg_t, const char *name)
-{
-    double d;
-    
-    if (! config_lookup_float(cfg_t, name, &d))
-	return 0.0f;
-
-    float f = d;
-
-    return f;
-}
-
 static qik_mtex
 alloc_mtex(const config_t *cfg_t, const Uint32 format)
 {
@@ -184,7 +171,7 @@ set_world(qik_map *map, const config_t *cfg_t)
 	    };
 	}
 
-    map->world.master = lookup_float(cfg_t, "world.master");
+    config_lookup_float(cfg_t, "world.master", &map->world.master);
 
     return 0;
 }
@@ -192,12 +179,12 @@ set_world(qik_map *map, const config_t *cfg_t)
 static int
 set_usr(qik_usr *usr, const config_t *cfg_t)
 {
-    usr->x_pos = lookup_float(cfg_t, "usr.x_pos");
-    usr->y_pos = lookup_float(cfg_t, "usr.y_pos");
-    usr->x_dir = lookup_float(cfg_t, "usr.x_dir");
-    usr->y_dir = lookup_float(cfg_t, "usr.y_dir");
-    usr->x_plane = lookup_float(cfg_t, "usr.x_plane");
-    usr->y_plane = lookup_float(cfg_t, "usr.y_plane");
+    config_lookup_float(cfg_t, "usr.x_pos", &usr->x_pos);
+    config_lookup_float(cfg_t, "usr.y_pos", &usr->y_pos);
+    config_lookup_float(cfg_t, "usr.x_dir", &usr->x_dir);
+    config_lookup_float(cfg_t, "usr.y_dir", &usr->y_dir);
+    config_lookup_float(cfg_t, "usr.x_plane", &usr->x_plane);
+    config_lookup_float(cfg_t, "usr.y_plane", &usr->y_plane);
 
     return 0;
 }
@@ -205,7 +192,7 @@ set_usr(qik_usr *usr, const config_t *cfg_t)
 static int
 set_string(qik_map *map, const config_t *cfg_t)
 {
-    config_lookup_string(cfg_t, "title",   (const char **)&map->title);
+    config_lookup_string(cfg_t, "title", (const char **)&map->title);
     config_lookup_string(cfg_t, "version", (const char **)&map->version);
     config_lookup_string(cfg_t, "music", (const char **)&map->music);
 
@@ -218,10 +205,10 @@ set_int(qik_map *map, const config_t *cfg_t)
     config_lookup_int(cfg_t, "speed", &map->speed);
 
     if (map->cfg.fog) {
-        config_lookup_int(cfg_t, "fog.r",      (int *)&map->fog.c.r);
-	config_lookup_int(cfg_t, "fog.g",      (int *)&map->fog.c.g);
-	config_lookup_int(cfg_t, "fog.b",      (int *)&map->fog.c.b);
-	config_lookup_int(cfg_t, "fog.f",             &map->fog.f);
+	config_lookup_int(cfg_t, "fog.r", (int *)&map->fog.c.r);
+	config_lookup_int(cfg_t, "fog.g", (int *)&map->fog.c.g);
+	config_lookup_int(cfg_t, "fog.b", (int *)&map->fog.c.b);
+	config_lookup_int(cfg_t, "fog.f", &map->fog.f);
     }
 
     return 0;

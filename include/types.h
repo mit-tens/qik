@@ -9,8 +9,8 @@ struct qik_mtex {
 
 typedef struct qik_spr qik_spr;
 struct qik_spr {
-    float x;
-    float y;
+    double x;
+    double y;
     unsigned tex;
 };
 
@@ -22,7 +22,7 @@ struct qik_mspr {
 
 typedef struct qik_map_cell qik_map_cell;
 struct qik_map_cell {
-    float h;
+    double h;
     unsigned w;
     unsigned f;
 };
@@ -49,36 +49,36 @@ struct qik_map {
 	SDL_Color c;
     } fog;
     struct {
-	float master;
+	double master;
 	unsigned w;
 	unsigned h;
 	qik_map_cell **tile;
 	qik_map_cell **roof;
     } world;
     struct {
-	float x_pos;
-	float y_pos;
-	float x_dir;
-	float y_dir;
-	float x_plane;
-	float y_plane;
+	double x_pos;
+	double y_pos;
+	double x_dir;
+	double y_dir;
+	double x_plane;
+	double y_plane;
     } usr;
 };
 
 typedef struct qik_usr qik_usr;
 struct qik_usr {
     char *name;
-    float x_pos;
-    float y_pos;
-    float z_pos;
-    float x_dir;
-    float x_dir_old;
-    float y_dir;
-    float x_plane;
-    float x_plane_old;
-    float y_plane;
-    float mov_speed;
-    float rot_speed;
+    double x_pos;
+    double y_pos;
+    double z_pos;
+    double x_dir;
+    double x_dir_old;
+    double y_dir;
+    double x_plane;
+    double x_plane_old;
+    double y_plane;
+    double mov_speed;
+    double rot_speed;
 };
 
 typedef struct qik_bind qik_bind;
