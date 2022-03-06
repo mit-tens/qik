@@ -2,9 +2,9 @@
 #define LOAD_H
 
 SDL_Surface*
-load_surface(const char *path, const Uint32 format);
+load_surface(char *, Uint32);
 
 SDL_Texture*
-load_texture(SDL_Renderer *renderer, const char *path, const Uint32 format);
+load_texture(SDL_Renderer *, char *, Uint32);
 
 #endif

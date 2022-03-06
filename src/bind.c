@@ -13,7 +13,7 @@ struct Key {
     SDL_Scancode s;
 };
 
-static const Key Keylist[] =
+static Key Keylist[] =
 {
     {"A", SDL_SCANCODE_A},
     {"B", SDL_SCANCODE_B},
@@ -77,7 +77,7 @@ static const Key Keylist[] =
 };
 
 static int
-lookup_bind(const config_t *cfg_t, const char *str, SDL_Scancode *n) {
+lookup_bind(config_t *cfg_t, char *str, SDL_Scancode *n) {
     char *tmp;
 
     config_lookup_string(cfg_t, str, (const char **)&tmp);
@@ -93,7 +93,7 @@ lookup_bind(const config_t *cfg_t, const char *str, SDL_Scancode *n) {
 }
 
 int
-load_bind(qik_bind *bind, const config_t *cfg_t) {
+load_bind(qik_bind *bind, config_t *cfg_t) {
     if (lookup_bind(cfg_t, "bind.dlook", &bind->dlook))
 	return 1;
     
@@ -127,18 +127,6 @@ load_bind(qik_bind *bind, const config_t *cfg_t) {
     return 0;
 }
 
-#define BIND_ULOOK glb_bind.ulook
-#define	BIND_DLOOK glb_bind.dlook
-#define	BIND_RLOOK glb_bind.rlook
-#define	BIND_LLOOK glb_bind.llook
-#define	BIND_FMOVE glb_bind.fmove
-#define	BIND_BMOVE glb_bind.bmove
-#define	BIND_RMOVE glb_bind.rmove
-#define	BIND_LMOVE glb_bind.lmove
-#define	BIND_PFIRE glb_bind.pfire
-#define	BIND_SFIRE glb_bind.sfire
-#define	BIND_TFIRE glb_bind.tfire
-
 /*
 W     = Move Forward*
 S     = Move Backward*
@@ -160,16 +148,6 @@ ESCAPE = Quit *
 void
 get_bind(void)
 {
-    /* Timing for input and FPS counter */
-    
-    glb_time_old = glb_time;
-    
-    glb_time = SDL_GetTicks();
-
-    /* glb_time_frame = frames per second */
-    
-    glb_time_frame = (glb_time - glb_time_old) / 1000;
-
     /* Vertical position of the camera */
     
     glb_usr.z_pos = glb_cfg.h / 2;
@@ -182,43 +160,43 @@ get_bind(void)
     
     SDL_PumpEvents();
     
-    const Uint8 *Keystate = SDL_GetKeyboardState(NULL);
+    Uint8 *Keystate = SDL_GetKeyboardState(NULL);
 
-    if (Keystate[BIND_FMOVE]) {
+    if (Keystate[glb_bind.fmove]) {
 	if (!glb_map.world.tile[(unsigned)(glb_usr.x_pos + glb_usr.x_dir * glb_usr.mov_speed)][(unsigned)glb_usr.y_pos].w)
 	    glb_usr.x_pos += glb_usr.x_dir * glb_usr.mov_speed;
 	if (!glb_map.world.tile[(unsigned)glb_usr.x_pos][(unsigned)(glb_usr.y_pos + glb_usr.y_dir * glb_usr.mov_speed)].w)
 	    glb_usr.y_pos += glb_usr.y_dir * glb_usr.mov_speed;
     }
 
-    if (Keystate[BIND_BMOVE]) {
+    if (Keystate[glb_bind.bmove]) {
 	if (!glb_map.world.tile[(unsigned)(glb_usr.x_pos - glb_usr.x_dir * glb_usr.mov_speed)][(unsigned)glb_usr.y_pos].w)
 	    glb_usr.x_pos -= glb_usr.x_dir * glb_usr.mov_speed;
 	if (!glb_map.world.tile[(unsigned)glb_usr.x_pos][(unsigned)(glb_usr.y_pos - glb_usr.y_dir * glb_usr.mov_speed)].w)
 	    glb_usr.y_pos -= glb_usr.y_dir * glb_usr.mov_speed;
     }
 
-    if (Keystate[BIND_RMOVE]) {
+    if (Keystate[glb_bind.rmove]) {
 	if (!glb_map.world.tile[(unsigned)(glb_usr.x_pos + glb_usr.x_plane * glb_usr.mov_speed)][(unsigned)glb_usr.y_pos].w)
 	    glb_usr.x_pos += glb_usr.x_plane * glb_usr.mov_speed;
 	if (!glb_map.world.tile[(unsigned)glb_usr.x_pos][(unsigned)(glb_usr.y_pos + glb_usr.y_plane * glb_usr.mov_speed)].w)
 	    glb_usr.y_pos += glb_usr.y_plane * glb_usr.mov_speed;
     }
 
-    if (Keystate[BIND_LMOVE]) {
+    if (Keystate[glb_bind.lmove]) {
 	if (!glb_map.world.tile[(unsigned)(glb_usr.x_pos - glb_usr.x_plane * glb_usr.mov_speed)][(unsigned)glb_usr.y_pos].w)
 	    glb_usr.x_pos -= glb_usr.x_plane * glb_usr.mov_speed;
 	if (!glb_map.world.tile[(unsigned)glb_usr.x_pos][(unsigned)(glb_usr.y_pos - glb_usr.y_plane * glb_usr.mov_speed)].w)
 	    glb_usr.y_pos -= glb_usr.y_plane * glb_usr.mov_speed;
     }
 
-    if (Keystate[BIND_ULOOK]) {
+    if (Keystate[glb_bind.ulook]) {
     }
 
-    if (Keystate[BIND_DLOOK]) {
+    if (Keystate[glb_bind.dlook]) {
     }
 
-    if (Keystate[BIND_RLOOK]) {
+    if (Keystate[glb_bind.rlook]) {
 	glb_usr.x_dir_old = glb_usr.x_dir;
 	glb_usr.x_dir = glb_usr.x_dir * cos(-glb_usr.rot_speed) - glb_usr.y_dir * sin(-glb_usr.rot_speed);
 	glb_usr.y_dir = glb_usr.x_dir_old * sin(-glb_usr.rot_speed) + glb_usr.y_dir * cos(-glb_usr.rot_speed);
@@ -227,7 +205,7 @@ get_bind(void)
 	glb_usr.y_plane = glb_usr.x_plane_old * sin(-glb_usr.rot_speed) + glb_usr.y_plane * cos(-glb_usr.rot_speed);
     }
 
-    if (Keystate[BIND_LLOOK]) {
+    if (Keystate[glb_bind.llook]) {
 	glb_usr.x_dir_old = glb_usr.x_dir;
 	glb_usr.x_dir = glb_usr.x_dir * cos(glb_usr.rot_speed) - glb_usr.y_dir * sin(glb_usr.rot_speed);
 	glb_usr.y_dir = glb_usr.x_dir_old * sin(glb_usr.rot_speed) + glb_usr.y_dir * cos(glb_usr.rot_speed);
@@ -236,14 +214,14 @@ get_bind(void)
 	glb_usr.y_plane = glb_usr.x_plane_old * sin(glb_usr.rot_speed) + glb_usr.y_plane * cos(glb_usr.rot_speed);
     }
     
-    if (Keystate[BIND_PFIRE]) {
+    if (Keystate[glb_bind.pfire]) {
 	exit(0);
     }
 
-    if (Keystate[BIND_SFIRE]) {
+    if (Keystate[glb_bind.sfire]) {
     }
 	
-    if (Keystate[BIND_TFIRE]) {
+    if (Keystate[glb_bind.tfire]) {
     }
 
     return;

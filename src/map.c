@@ -8,8 +8,8 @@
 #include "load.h"
 #include "map.h"
 
-static qik_mtex
-alloc_mtex(const config_t *cfg_t, const Uint32 format)
+static void
+alloc_mtex(qik_mtex *mtex, config_t *cfg_t, Uint32 format)
 {
     config_setting_t *set_tex;
 
@@ -18,16 +18,16 @@ alloc_mtex(const config_t *cfg_t, const Uint32 format)
 
     unsigned ntex = config_setting_length(set_tex);
 
-    qik_mtex mtex = (qik_mtex){.n=ntex, .ref=malloc(ntex * sizeof(SDL_Surface *))};
+    *mtex = (qik_mtex){.n=ntex, .ref=malloc(ntex * sizeof(SDL_Surface *))};
 
     for (unsigned i = 0; i < ntex; ++i)
-	mtex.ref[i] = load_surface(config_setting_get_string_elem(set_tex, i), format);
+	mtex->ref[i] = load_surface(config_setting_get_string_elem(set_tex, i), format);
 
-    return mtex;
+    return;
 }
 
-static qik_mspr
-alloc_mspr(const config_t *cfg_t)
+static void
+alloc_mspr(qik_mspr *mspr, config_t *cfg_t)
 {
     config_setting_t *set_spr;
 
@@ -36,27 +36,27 @@ alloc_mspr(const config_t *cfg_t)
 
     unsigned nspr = config_setting_length(set_spr);
     
-    qik_mspr mspr = (qik_mspr){.n=nspr, .ref=malloc(nspr * sizeof(qik_spr))};
+    *mspr = (qik_mspr){.n=nspr, .ref=malloc(nspr * sizeof(qik_spr))};
 
     for (unsigned i = 0; i < nspr; ++i)
-	mspr.ref[i] = (qik_spr) {
+	mspr->ref[i] = (qik_spr) {
 	    config_setting_get_float_elem(config_setting_get_elem(set_spr, i), 0),
 	    config_setting_get_float_elem(config_setting_get_elem(set_spr, i), 1),
 	    config_setting_get_int_elem(config_setting_get_elem(set_spr, i), 2)
 	};
 
-    return mspr;
+    return;
 }
 
-static qik_map_cell **
-alloc_world_ref(const unsigned cols, const unsigned rows)
+static void
+alloc_world_ref(qik_map_cell **ref, unsigned cols, unsigned rows)
 {
-    qik_map_cell **ref = malloc(rows * sizeof(qik_map_cell *));
+    ref = malloc(rows * sizeof(qik_map_cell *));
 
     for (unsigned i = 0; i < rows; ++i)
 	ref[i] = malloc(cols * sizeof(qik_map_cell));
 
-    return ref;
+    return;
 }
 
 static void
@@ -83,7 +83,7 @@ free_mspr(qik_mspr *mspr)
 }
 
 static void
-free_world_ref(qik_map_cell **ref, const unsigned rows)
+free_world_ref(qik_map_cell **ref, unsigned rows)
 {
     for (unsigned i = 0; i < rows; ++i)
 	free(ref[i]);
@@ -113,7 +113,7 @@ free_usr(qik_usr *usr)
 }
 
 static int
-set_bool(qik_map *map, const config_t *cfg_t)
+set_bool(qik_map *map, config_t *cfg_t)
 {
     config_lookup_bool(cfg_t, "cfg.walls",   (int *)&map->cfg.walls);
     config_lookup_bool(cfg_t, "cfg.floor",   (int *)&map->cfg.floor);
@@ -129,7 +129,7 @@ set_bool(qik_map *map, const config_t *cfg_t)
 }
 
 static int
-set_world(qik_map *map, const config_t *cfg_t)
+set_world(qik_map *map, config_t *cfg_t)
 {
     config_setting_t *set_tile, *set_roof;
 
@@ -150,10 +150,14 @@ set_world(qik_map *map, const config_t *cfg_t)
     map->world.w = w_tile;
     map->world.h = h_tile;
 
-    if ((map->world.tile = alloc_world_ref(map->world.w, map->world.h)) == NULL)
+    alloc_world_ref(map->world.tile, map->world.w, map->world.h);
+
+    if (map->world.tile == NULL)
 	return 1;
 
-    if ((map->world.roof = alloc_world_ref(map->world.w, map->world.h)) == NULL)
+    alloc_world_ref(map->world.roof, map->world.w, map->world.h);
+    
+    if (map->world.roof == NULL)
 	return 1;
     
     for (unsigned x = 0; x < map->world.w; ++x)
@@ -177,7 +181,7 @@ set_world(qik_map *map, const config_t *cfg_t)
 }
 
 static int
-set_usr(qik_usr *usr, const config_t *cfg_t)
+set_usr(qik_usr *usr, config_t *cfg_t)
 {
     config_lookup_float(cfg_t, "usr.x_pos", &usr->x_pos);
     config_lookup_float(cfg_t, "usr.y_pos", &usr->y_pos);
@@ -190,7 +194,7 @@ set_usr(qik_usr *usr, const config_t *cfg_t)
 }
 
 static int
-set_string(qik_map *map, const config_t *cfg_t)
+set_string(qik_map *map, config_t *cfg_t)
 {
     config_lookup_string(cfg_t, "title", (const char **)&map->title);
     config_lookup_string(cfg_t, "version", (const char **)&map->version);
@@ -200,7 +204,7 @@ set_string(qik_map *map, const config_t *cfg_t)
 }
 
 static int
-set_int(qik_map *map, const config_t *cfg_t)
+set_int(qik_map *map, config_t *cfg_t)
 {
     config_lookup_int(cfg_t, "speed", &map->speed);
 
@@ -214,30 +218,8 @@ set_int(qik_map *map, const config_t *cfg_t)
     return 0;
 }
 
-static int
-set_mtex(qik_mtex *mtex, const config_t *cfg_t, const Uint32 format)
-{
-    *mtex = alloc_mtex(cfg_t, format);
-
-    if (mtex == NULL)
-	return 1;
-
-    return 0;
-}
-
-static int
-set_mspr(qik_mspr *mspr, const config_t *cfg_t)
-{
-    *mspr = alloc_mspr(cfg_t);
-
-    if (mspr == NULL)
-	return 1;
-
-    return 0;
-}
-
 int
-load_map(qik_map *map, qik_usr *usr, qik_mtex *mtex, qik_mspr *mspr, config_t *cfg_t, const char *path, const Uint32 format)
+load_map(qik_map *map, qik_usr *usr, qik_mtex *mtex, qik_mspr *mspr, config_t *cfg_t, char *path, Uint32 format)
 {
     if (get_cfg_t(cfg_t, path))
 	return 1;
@@ -257,11 +239,9 @@ load_map(qik_map *map, qik_usr *usr, qik_mtex *mtex, qik_mspr *mspr, config_t *c
     if (set_int(map, cfg_t))
 	return 1;
 
-    if (set_mtex(mtex, cfg_t, format))
-	return 1;
+    alloc_mtex(mtex, cfg_t, format);
 
-    if (set_mspr(mspr, cfg_t))
-	return 1;
+    alloc_mspr(mspr, cfg_t);
 
     return 0;
 }

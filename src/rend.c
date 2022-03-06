@@ -21,7 +21,7 @@
 #define uypos (unsigned)glb_usr.y_pos
 
 static Uint32
-getrawpixel(const SDL_Surface *surface, const int x, const int y)
+getrawpixel(SDL_Surface *surface, int x, int y)
 {
     int bpp = surface->format->BytesPerPixel;
     
@@ -55,7 +55,7 @@ getrawpixel(const SDL_Surface *surface, const int x, const int y)
 }
 
 static SDL_Color
-getpixel(const SDL_Surface *surface, const int x, const int y)
+getpixel(SDL_Surface *surface, int x, int y)
 {
     SDL_Color rgb;
 
@@ -65,7 +65,7 @@ getpixel(const SDL_Surface *surface, const int x, const int y)
 }
 
 static void
-drawpixel(SDL_Renderer *renderer, const SDL_Color color, const unsigned x, const unsigned y)
+drawpixel(SDL_Renderer *renderer, SDL_Color color, unsigned x, unsigned y)
 {
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, SDL_ALPHA_OPAQUE);
 
@@ -75,7 +75,7 @@ drawpixel(SDL_Renderer *renderer, const SDL_Color color, const unsigned x, const
 }
 
 static inline SDL_Color
-interpolate_rgb(const SDL_Color rgb, const SDL_Color c, const double fpcnt) /* Here fpcnt should be perpWallDist / fog.f */
+interpolate_rgb(SDL_Color rgb, SDL_Color c, double fpcnt) /* Here fpcnt should be perpWallDist / fog.f */
 {
     return (SDL_Color) {
 	(1 - (fpcnt > 1) ? 1 : fpcnt) * rgb.r + fpcnt * c.r,
@@ -86,7 +86,7 @@ interpolate_rgb(const SDL_Color rgb, const SDL_Color c, const double fpcnt) /* H
 }
 
 static inline SDL_Surface *
-getmtex(const unsigned id)
+getmtex(unsigned id)
 {
     return (id >= glb_mtex.n) ?
 	glb_mtex.ref[0] :

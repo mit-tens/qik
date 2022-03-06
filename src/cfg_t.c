@@ -3,7 +3,7 @@
 #include "cfg_t.h"
 
 int
-get_cfg_t(config_t *cfg_t, const char *path)
+get_cfg_t(config_t *cfg_t, char *path)
 {
     config_init(cfg_t);
 

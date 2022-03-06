@@ -13,6 +13,7 @@
 #include "bind.h"
 #include "map.h"
 #include "rend.h"
+#include "frame.h"
 
 /* It's wiser to initialize these to real values instead of NULL or zero, in that they're still valid unmodified. */
 
@@ -137,8 +138,9 @@ main(int argc, char *argv[])
     glb_running = true;
 
     while (glb_running) {
-        get_rend();
-        get_bind();
+	get_rend();
+	get_bind();
+	get_frames();
     }
 
     return EXIT_SUCCESS;
@@ -153,7 +155,7 @@ usage:
     fprintf(stderr, "-cfg       <file>    Use config file\n");
     fprintf(stderr, "-map       <file>    Load to map file\n");
     fprintf(stderr, "-scr       <w> <h>   Override screen size\n");
-    fprintf(stderr, "-usr       <string>  Username for player\n"); 
+    fprintf(stderr, "-usr       <name>    Username for player\n"); 
     fprintf(stderr, "-fhqwhgads           You are here\n");
 
     return EXIT_FAILURE;

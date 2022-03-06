@@ -5,10 +5,10 @@ Churning those bastardly bytes into Qik is easy. Follow my n step recipe:
 You will need:
     The source (try looking here first)
     libSDL2
-    SDL2_mixer
+    SDL2_mixer (nothing implemented yet)
     libconfig
-    GNU Make
-    GCC or equivalent
+    Make (BSD Make should work fine)
+    a C compiler
 
 So when you have that..
 
@@ -26,4 +26,4 @@ Procurement:
 
 Alternatively, I might have binaries available someday, mabye even for win32.
 
-Qik itself is distributed under the GNU General Public License Version 3. See 'COPYING' for that.
+Qik itself is distributed under the Do What the Fuck You Want to Public License version 2.

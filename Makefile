@@ -5,7 +5,7 @@ SRC_DIR = src
 OBJ_DIR = obj
 INC_DIR = include
 
-SRC = $(wildcard $(SRC_DIR)/*.c)
+SRC != ls $(SRC_DIR)/*.c
 OBJ = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 CFLAGS = -Wall -Wextra -lm -lSDL2 -lconfig -O2

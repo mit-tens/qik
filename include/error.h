@@ -1,7 +1,7 @@
 #ifndef ERROR_H
 #define ERROR_H
 
-const char *intercal[] = {
+char *intercal[] = {
     "E017 DO YOU EXPECT ME TO FIGURE THIS OUT?",
     "E079 PROGRAMMER IS INSUFFICIENTLY POLITE",
     "E099 PROGRAMMER IS OVERLY POLITE",

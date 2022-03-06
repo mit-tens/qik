@@ -2,7 +2,7 @@
 #define BIND_H
 
 int
-load_bind(qik_bind *bind, const config_t *cfg_t);
+load_bind(qik_bind *, config_t *);
 
 void
 get_bind(void);

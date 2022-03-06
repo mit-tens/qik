@@ -4,7 +4,7 @@
 #include "load.h"
 
 SDL_Surface*
-load_surface(const char *path, const Uint32 format)
+load_surface(char *path, Uint32 format)
 {
     SDL_Surface *loaded_surface = SDL_LoadBMP(path);
 
@@ -22,7 +22,7 @@ load_surface(const char *path, const Uint32 format)
 }
 
 SDL_Texture*
-load_texture(SDL_Renderer *renderer, const char *path, const Uint32 format)
+load_texture(SDL_Renderer *renderer, char *path, Uint32 format)
 {
     SDL_Texture *loaded_texture = SDL_CreateTextureFromSurface(renderer, load_surface(path, format));
 
