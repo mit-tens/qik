@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <libconfig.h>
-#include "cfg_t.h"
+#include "config.h"
 
 int
-get_cfg_t(config_t *cfg_t, char *path)
+retrieve_config(config_t *cfg_t, char *path)
 {
     config_init(cfg_t);
 

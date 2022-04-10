@@ -4,76 +4,80 @@
 #include <time.h>
 #include <SDL2/SDL.h>
 #include <libconfig.h>
-#include "defs.h"
-#include "types.h"
-#include "glb.h"
-#include "common.h"
-#include "error.h"
-#include "cfg_t.h"
-#include "bind.h"
+#include "qik/defs.h"
+#include "qik/types.h"
+#include "global.h"
+#include "qik/common.h"
+#include "qik/error.h"
+#include "config.h"
+#include "control.h"
 #include "map.h"
-#include "rend.h"
-#include "frame.h"
+#include "render.h"
 
 /* It's wiser to initialize these to real values instead of NULL or zero, in that they're still valid unmodified. */
 
 static char *initcfg = QIK_INITCFG, *initmap = QIK_INITMAP, *initusr = QIK_INITUSR;
 
-static unsigned initw = QIK_INITW, inith = QIK_INITH;
+static int initw = QIK_INITW, inith = QIK_INITH;
 
 static bool use_initcfg = false, use_initmap = false, use_initusr = false, use_initscr = false;
 
 static int
-load_cfg(void)
+cfg(void)
 {
-    if (get_cfg_t(&glb_cfg_cfg_t, use_initcfg ? initcfg : QIK_INITCFG))
-	return 1;
+	if (retrieve_config(&gconfig_t, use_initcfg ? initcfg : QIK_INITCFG))
+		return 1;
 
-    if (use_initscr)
-	glb_cfg.w = initw, glb_cfg.h = inith;
-    else
-	if ((! config_lookup_int(&glb_cfg_cfg_t, "w", (int *)&glb_cfg.w)) ||
-	    (! config_lookup_int(&glb_cfg_cfg_t, "h", (int *)&glb_cfg.h)))
-	    
-	    glb_cfg.w = QIK_INITW, glb_cfg.h = QIK_INITH;
-    
-    if (use_initusr)
-	glb_cfg.usr = initusr;
-    else
-	if (! config_lookup_string(&glb_cfg_cfg_t, "usr", (const char **)&glb_cfg.usr))
-	    glb_cfg.usr = QIK_INITUSR;
+	if (use_initscr)
+		gConfig.w = initw, gConfig.h = inith;
+	else
+	if ((! config_lookup_int(&gconfig_t, "w", (int *)&gConfig.w)) ||
+	    (! config_lookup_int(&gconfig_t, "h", (int *)&gConfig.h)))
+	    gConfig.w = QIK_INITW, gConfig.h = QIK_INITH;
 
-    glb_usr.name = glb_cfg.usr;
+	if (use_initusr)
+		gConfig.usr = initusr;
+	else
+	if (! config_lookup_string(&gconfig_t, "usr", (const char **)&gConfig.usr))
+	    gConfig.usr = QIK_INITUSR;
 
-    if (use_initmap)
-	glb_cfg.map = initmap;
-    else
+	gUser.name = gConfig.usr;
+
+	if (use_initmap)
+		gConfig.map = initmap;
+	else
 	if (! config_lookup_string(&glb_cfg_cfg_t, "map", (const char **)&glb_cfg.map))
-	    glb_cfg.map = QIK_INITMAP;
-    
-    return 0;
+		glb_cfg.map = QIK_INITMAP;
+
+	return 0;
 }
 
 static int
 init_sdl(void)
 {
-    if (SDL_Init(SDL_INIT_VIDEO))
-	return 1;
+	if (SDL_Init(SDL_INIT_VIDEO))
+		return 1;
 
-    if ((glb_window = SDL_CreateWindow(QIK_VERSION, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, glb_cfg.w, glb_cfg.h, 0)) == NULL)
-	return 1;
-    
-    if ((glb_format = SDL_GetWindowPixelFormat(glb_window)) == SDL_PIXELFORMAT_UNKNOWN)
-	return 1;
+	if ((gWindow = SDL_CreateWindow(QIK_VERSION,
+					SDL_WINDOWPOS_UNDEFINED,
+					SDL_WINDOWPOS_UNDEFINED,
+					glb_cfg.w,
+					glb_cfg.h,
+					0
+	)) == NULL)
+		return 1;
 
-    if ((glb_renderer = SDL_CreateRenderer(glb_window, -1, SDL_RENDERER_ACCELERATED)) == NULL)
-	return 1;
+	if ((gFormat = SDL_GetWindowPixelFormat(gWindow)) == SDL_PIXELFORMAT_UNKNOWN)
+		return 1;
 
-    return 0;
+	if ((gRenderer = SDL_CreateRenderer(gWindow, -1, SDL_RENDERER_ACCELERATED)) == NULL)
+		return 1;
+
+	return 0;
 }
 
 static int
-main_args(int argc, char *argv[])
+args(int argc, char *argv[])
 {
     for (int i = 1; i < argc; ++i) {
 	if ((strcmp(argv[i], "-cfg") == 0)) {
@@ -114,10 +118,10 @@ main(int argc, char *argv[])
 {
     fprintf(stderr, "%s\nCopyright %s %s\n", QIK_VERSION, QIK_CPYYEAR, QIK_AUTHORS);
     
-    if (main_args(argc, argv))
+    if (args(argc, argv))
 	goto usage;
 
-    if (load_cfg())
+    if (cfg())
 	goto scram;
 
     if (load_bind(&glb_bind, &glb_cfg_cfg_t))

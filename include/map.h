@@ -2,9 +2,9 @@
 #define MAP_H
 
 int
-load_map(qik_map *, qik_usr *, qik_mtex *, qik_mspr *, config_t *, char *, Uint32);
+load_map(Map *, User *, SDL_Surface **, Sprite *, config_t *, char *, Uint32);
 
 void
-unload_map(qik_map *, qik_usr *, qik_mtex *, qik_mspr *, config_t *);
+unload_map(Map *, User *, SDL_Surface **, Sprite *, config_t *);
 
 #endif

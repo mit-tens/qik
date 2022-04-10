@@ -1,30 +1,28 @@
 CC = cc
-EXE = qik
+BIN = qik
 
-SRC_DIR = src
-OBJ_DIR = obj
-INC_DIR = include
+CFILES = src/config.c \
+	src/control.c \
+	src/gfx/graphics.c \
+	src/gfx/image.c \
+	src/global.c \
+	src/main.c \
+	src/map.c \
+	src/render.c
 
-SRC != ls $(SRC_DIR)/*.c
-OBJ = $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
+CFLAGS = -Iinclude -Wall -Wextra -lm -lSDL2 -lconfig -O2
+DEBUGS = -O0 -g
 
-CFLAGS = -Wall -Wextra -lm -lSDL2 -lconfig -O2
-CPPFLAGS = -I$(INC_DIR)
-DBGFLAGS = -O0 -g
+all: $(BIN)
 
-all: $(EXE)
-
-debug: CFLAGS += $(DBGFLAGS)
+debug: CFLAGS += $(DEBUGS)
 debug: all
 
-$(EXE): $(OBJ)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -o $(EXE) $(OBJ)
-
-$(OBJ): $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+$(BIN): $(CFILES)
+	$(CC) $(CFLAGS) $(SRC) -o $(BIN)
 
 clean:
-	rm $(EXE) $(OBJ_DIR)/*.o
+	rm $(BIN)
 
 maid:
 	rm ./*~ */*~

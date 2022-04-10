@@ -7,7 +7,7 @@ You will need:
     libSDL2
     SDL2_mixer (nothing implemented yet)
     libconfig
-    Make (BSD Make should work fine)
+    Make (any old Make should work fine)
     a C compiler
 
 So when you have that..
@@ -23,7 +23,5 @@ Procurement:
     https://www.libsdl.org/download-2.0.php
     https://www.libsdl.org/projects/SDL_mixer
     https://github.com/hyperrealm/libconfig
-
-Alternatively, I might have binaries available someday, mabye even for win32.
 
 Qik itself is distributed under the Do What the Fuck You Want to Public License version 2.

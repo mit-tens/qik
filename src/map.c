@@ -2,262 +2,225 @@
 #include <stdbool.h>
 #include <SDL2/SDL.h>
 #include <libconfig.h>
-#include "common.h"
-#include "types.h"
-#include "cfg_t.h"
-#include "load.h"
+#include "qik/common.h"
+#include "qik/types.h"
+#include "config.h"
+#include "gfx/image.h"
 #include "map.h"
 
-static void
-alloc_mtex(qik_mtex *mtex, config_t *cfg_t, Uint32 format)
+static SDL_Surface **
+alloc_gSurface(SDL_Surface **gSurface, config_t *cfg_t, Uint32 format)
 {
-    config_setting_t *set_tex;
+	config_setting_t *set_tex;
 
-    if ((set_tex = config_lookup(cfg_t, "tex")) == NULL)
-	return (qik_mtex){ 0 };
+	if ((set_tex = config_lookup(cfg_t, "tex")) == NULL)
+		return NULL;
 
-    unsigned ntex = config_setting_length(set_tex);
+	int ntex = config_setting_length(set_tex);
 
-    *mtex = (qik_mtex){.n=ntex, .ref=malloc(ntex * sizeof(SDL_Surface *))};
+	gSurface = malloc(ntex * sizeof(SDL_Surface *));
 
-    for (unsigned i = 0; i < ntex; ++i)
-	mtex->ref[i] = load_surface(config_setting_get_string_elem(set_tex, i), format);
+	for (int i = 0; i < ntex; ++i)
+		gSurface[i] = load_surface(config_setting_get_string_elem(set_tex, i), format);
 
-    return;
+	return gSurface;
 }
 
-static void
-alloc_mspr(qik_mspr *mspr, config_t *cfg_t)
+static Sprite *
+alloc_gSprite(Sprite *gSprite, config_t *cfg_t)
 {
-    config_setting_t *set_spr;
+	config_setting_t *set_spr;
 
-    if ((set_spr = config_lookup(cfg_t, "spr")) == NULL)
-	return (qik_mspr){ 0 };
+	if ((set_spr = config_lookup(cfg_t, "spr")) == NULL)
+		return NULL;
 
-    unsigned nspr = config_setting_length(set_spr);
+	int nspr = config_setting_length(set_spr);
     
-    *mspr = (qik_mspr){.n=nspr, .ref=malloc(nspr * sizeof(qik_spr))};
+	gSprite = malloc(nspr * sizeof(Sprite));
 
-    for (unsigned i = 0; i < nspr; ++i)
-	mspr->ref[i] = (qik_spr) {
-	    config_setting_get_float_elem(config_setting_get_elem(set_spr, i), 0),
-	    config_setting_get_float_elem(config_setting_get_elem(set_spr, i), 1),
-	    config_setting_get_int_elem(config_setting_get_elem(set_spr, i), 2)
-	};
+	for (int i = 0; i < nspr; ++i)
+		gSprite[i] = (Sprite) {
+			config_setting_get_float_elem(config_setting_get_elem(set_spr, i), 0),
+			config_setting_get_float_elem(config_setting_get_elem(set_spr, i), 1),
+			config_setting_get_int_elem(config_setting_get_elem(set_spr, i), 2)
+		};
 
-    return;
+	return gSprite;
+}
+
+static Cell **
+alloc_world_ref(Cell **ref, int cols, int rows)
+{
+	ref = malloc(rows * sizeof(Cell *));
+
+	for (int i = 0; i < rows; ++i)
+		ref[i] = malloc(cols * sizeof(Cell));
+
+	return ref;
+}
+
+/* Used for freeing Map.world.* and gSurface */
+static void
+free_double_pointer(void **ptr, int size)
+{
+	for (int i = 0; i < size; ++i)
+		free(ptr[i]);
+
+	free(ptr);
 }
 
 static void
-alloc_world_ref(qik_map_cell **ref, unsigned cols, unsigned rows)
+free_map(Map *map)
 {
-    ref = malloc(rows * sizeof(qik_map_cell *));
-
-    for (unsigned i = 0; i < rows; ++i)
-	ref[i] = malloc(cols * sizeof(qik_map_cell));
-
-    return;
-}
-
-static void
-free_mtex(qik_mtex *mtex)
-{
-    for (unsigned i = 0; i < mtex->n; ++i)
-	free(mtex->ref[i]);
-
-    free(mtex->ref);
-
-    *mtex = (qik_mtex){ 0 };
-
-    return;
-}
-
-static void
-free_mspr(qik_mspr *mspr)
-{
-    free(mspr->ref);
-
-    *mspr = (qik_mspr){ 0 };
-
-    return;
-}
-
-static void
-free_world_ref(qik_map_cell **ref, unsigned rows)
-{
-    for (unsigned i = 0; i < rows; ++i)
-	free(ref[i]);
+	free_double_pointer(map->world.tile, map->world.h);
+	free_double_pointer(map->world.roof, map->world.h);
     
-    free(ref);
-
-    return;
+	*map = (Map){ 0 };
 }
 
-static void
-free_map(qik_map *map)
+static Map *
+set_bool(Map *map, config_t *cfg_t)
 {
-    free_world_ref(map->world.tile, map->world.h);
-    free_world_ref(map->world.roof, map->world.h);
+	config_lookup_bool(cfg_t, "cfg.walls",   (int *)&map->cfg.walls);
+	config_lookup_bool(cfg_t, "cfg.floor",   (int *)&map->cfg.floor);
+	config_lookup_bool(cfg_t, "cfg.ceil",    (int *)&map->cfg.ceil);
+	config_lookup_bool(cfg_t, "cfg.roof",    (int *)&map->cfg.roof);
+	config_lookup_bool(cfg_t, "cfg.tile",    (int *)&map->cfg.tile);
+	config_lookup_bool(cfg_t, "cfg.sprites", (int *)&map->cfg.sprites);
+	config_lookup_bool(cfg_t, "cfg.sky",     (int *)&map->cfg.sky);
+	config_lookup_bool(cfg_t, "cfg.shadows", (int *)&map->cfg.shadows);
+	config_lookup_bool(cfg_t, "cfg.fog",     (int *)&map->cfg.fog);
+
+	return map;
+}
+
+static Map *
+set_world(Map *map, config_t *cfg_t)
+{
+	config_setting_t *set_tile, *set_roof;
+
+	if ((set_tile = config_lookup(cfg_t, "world.tile")) == NULL)
+		return NULL;
+
+	if ((set_roof = config_lookup(cfg_t, "world.roof")) == NULL)
+		return NULL;
+
+	int w_tile = config_setting_length(config_setting_get_elem(set_tile, 0));
+	int h_tile = config_setting_length(set_tile);
+	int w_roof = config_setting_length(config_setting_get_elem(set_roof, 0));
+	int h_roof = config_setting_length(set_roof);
+
+	if (w_tile != w_roof || h_tile != h_roof)
+		return NULL;
+
+	map->world.w = w_tile;
+	map->world.h = h_tile;
+
+	if (alloc_world_ref(map->world.tile, map->world.w, map->world.h) == NULL)
+		return NULL;
+
+	if (alloc_world_ref(map->world.roof, map->world.w, map->world.h) == NULL)
+		return NULL;
     
-    *map = (qik_map){ 0 };
-
-    return;
-}
-
-static void
-free_usr(qik_usr *usr)
-{
-    *usr = (qik_usr){ 0 };
-
-    return;
-}
-
-static int
-set_bool(qik_map *map, config_t *cfg_t)
-{
-    config_lookup_bool(cfg_t, "cfg.walls",   (int *)&map->cfg.walls);
-    config_lookup_bool(cfg_t, "cfg.floor",   (int *)&map->cfg.floor);
-    config_lookup_bool(cfg_t, "cfg.ceil",    (int *)&map->cfg.ceil);
-    config_lookup_bool(cfg_t, "cfg.roof",    (int *)&map->cfg.roof);
-    config_lookup_bool(cfg_t, "cfg.tile",    (int *)&map->cfg.tile);
-    config_lookup_bool(cfg_t, "cfg.sprites", (int *)&map->cfg.sprites);
-    config_lookup_bool(cfg_t, "cfg.sky",     (int *)&map->cfg.sky);
-    config_lookup_bool(cfg_t, "cfg.shadows", (int *)&map->cfg.shadows);
-    config_lookup_bool(cfg_t, "cfg.fog",     (int *)&map->cfg.fog);
-
-    return 0;
-}
-
-static int
-set_world(qik_map *map, config_t *cfg_t)
-{
-    config_setting_t *set_tile, *set_roof;
-
-    if ((set_tile = config_lookup(cfg_t, "world.tile")) == NULL)
-	return 1;
-
-    if ((set_roof = config_lookup(cfg_t, "world.roof")) == NULL)
-	return 1;
-
-    unsigned w_tile = (unsigned)config_setting_length(config_setting_get_elem(set_tile, 0));
-    unsigned h_tile = (unsigned)config_setting_length(set_tile);
-    unsigned w_roof = (unsigned)config_setting_length(config_setting_get_elem(set_roof, 0));
-    unsigned h_roof = (unsigned)config_setting_length(set_roof);
-
-    if (w_tile != w_roof || h_tile != h_roof)
-	return 1;
-
-    map->world.w = w_tile;
-    map->world.h = h_tile;
-
-    alloc_world_ref(map->world.tile, map->world.w, map->world.h);
-
-    if (map->world.tile == NULL)
-	return 1;
-
-    alloc_world_ref(map->world.roof, map->world.w, map->world.h);
-    
-    if (map->world.roof == NULL)
-	return 1;
-    
-    for (unsigned x = 0; x < map->world.w; ++x)
-	for (unsigned y = 0; y < map->world.h; ++y) {
-	    map->world.tile[x][y] = (qik_map_cell) {
-		config_setting_get_float_elem(config_setting_get_elem(config_setting_get_elem(set_tile, y), x), 0),
-		config_setting_get_int_elem(config_setting_get_elem(config_setting_get_elem(set_tile, y), x), 1),
-		config_setting_get_int_elem(config_setting_get_elem(config_setting_get_elem(set_tile, y), x), 2),
-	    };
+	for (int x = 0; x < map->world.w; ++x)
+		for (int y = 0; y < map->world.h; ++y) {
+	    	map->world.tile[x][y] = (Cell) {
+			config_setting_get_float_elem(config_setting_get_elem(config_setting_get_elem(set_tile, y), x), 0),
+			config_setting_get_int_elem(config_setting_get_elem(config_setting_get_elem(set_tile, y), x), 1),
+			config_setting_get_int_elem(config_setting_get_elem(config_setting_get_elem(set_tile, y), x), 2),
+	 	   };
 	    
-	    map->world.roof[x][y] = (qik_map_cell) {
-		config_setting_get_float_elem(config_setting_get_elem(config_setting_get_elem(set_roof, y), x), 0),
-		config_setting_get_int_elem(config_setting_get_elem(config_setting_get_elem(set_roof, y), x), 1),
-		config_setting_get_int_elem(config_setting_get_elem(config_setting_get_elem(set_roof, y), x), 2),
-	    };
+		    map->world.roof[x][y] = (Cell) {
+			config_setting_get_float_elem(config_setting_get_elem(config_setting_get_elem(set_roof, y), x), 0),
+			config_setting_get_int_elem(config_setting_get_elem(config_setting_get_elem(set_roof, y), x), 1),
+			config_setting_get_int_elem(config_setting_get_elem(config_setting_get_elem(set_roof, y), x), 2),
+		    };
 	}
 
-    config_lookup_float(cfg_t, "world.master", &map->world.master);
+	config_lookup_float(cfg_t, "world.master", &map->world.master);
 
-    return 0;
+	return map;
 }
 
-static int
-set_usr(qik_usr *usr, config_t *cfg_t)
+static Map *
+set_string(Map *map, config_t *cfg_t)
 {
-    config_lookup_float(cfg_t, "usr.x_pos", &usr->x_pos);
-    config_lookup_float(cfg_t, "usr.y_pos", &usr->y_pos);
-    config_lookup_float(cfg_t, "usr.x_dir", &usr->x_dir);
-    config_lookup_float(cfg_t, "usr.y_dir", &usr->y_dir);
-    config_lookup_float(cfg_t, "usr.x_plane", &usr->x_plane);
-    config_lookup_float(cfg_t, "usr.y_plane", &usr->y_plane);
+	config_lookup_string(cfg_t, "title", (const char **)&map->title);
+	config_lookup_string(cfg_t, "music", (const char **)&map->music);
 
-    return 0;
+	return map;
 }
 
-static int
-set_string(qik_map *map, config_t *cfg_t)
+static Map *
+set_int(Map *map, config_t *cfg_t)
 {
-    config_lookup_string(cfg_t, "title", (const char **)&map->title);
-    config_lookup_string(cfg_t, "version", (const char **)&map->version);
-    config_lookup_string(cfg_t, "music", (const char **)&map->music);
+	config_lookup_int(cfg_t, "speed", &map->speed);
 
-    return 0;
+	if (map->cfg.fog) {
+		config_lookup_int(cfg_t, "fog.r", (int *)&map->fog.c.r);
+		config_lookup_int(cfg_t, "fog.g", (int *)&map->fog.c.g);
+		config_lookup_int(cfg_t, "fog.b", (int *)&map->fog.c.b);
+		config_lookup_int(cfg_t, "fog.f", &map->fog.f);
+	}
+
+	return map;
 }
 
-static int
-set_int(qik_map *map, config_t *cfg_t)
+static User *
+set_user(User *user, config_t *cfg_t)
 {
-    config_lookup_int(cfg_t, "speed", &map->speed);
+	config_lookup_float(cfg_t, "usr.x_pos", &user->x_pos);
+	config_lookup_float(cfg_t, "usr.y_pos", &user->y_pos);
+	config_lookup_float(cfg_t, "usr.x_dir", &user->x_dir);
+	config_lookup_float(cfg_t, "usr.y_dir", &user->y_dir);
+	config_lookup_float(cfg_t, "usr.x_plane", &user->x_plane);
+	config_lookup_float(cfg_t, "usr.y_plane", &user->y_plane);
 
-    if (map->cfg.fog) {
-	config_lookup_int(cfg_t, "fog.r", (int *)&map->fog.c.r);
-	config_lookup_int(cfg_t, "fog.g", (int *)&map->fog.c.g);
-	config_lookup_int(cfg_t, "fog.b", (int *)&map->fog.c.b);
-	config_lookup_int(cfg_t, "fog.f", &map->fog.f);
-    }
-
-    return 0;
+	return user;
 }
 
 int
-load_map(qik_map *map, qik_usr *usr, qik_mtex *mtex, qik_mspr *mspr, config_t *cfg_t, char *path, Uint32 format)
+load_map(Map *map, User *user, SDL_Surface **gSurface, Sprite *gSprite, config_t *cfg_t, char *path, Uint32 format)
 {
-    if (get_cfg_t(cfg_t, path))
-	return 1;
+	if (retrieve_config(cfg_t, path))
+		return 1;
 
-    if (set_bool(map, cfg_t))
-	return 1;
+	if (set_bool(map, cfg_t) == NULL)
+		return 1;
 
-    if (set_world(map, cfg_t))
-	return 1;
+	if (set_map(map, cfg_t) == NULL)
+		return 1
 
-    if (set_usr(usr, cfg_t))
-	return 1;
+	if (set_string(map, cfg_t) == NULL)
+		return 1;
 
-    if (set_string(map, cfg_t))
-	return 1;
+	if (set_int(map, cfg_t) == NULL)
+		return 1;
 
-    if (set_int(map, cfg_t))
-	return 1;
+	if (set_user(user, cfg_t) == NULL)
+		return 1;
 
-    alloc_mtex(mtex, cfg_t, format);
+	if (alloc_gSurface(gSurface, cfg_t, format) == NULL)
+		return 1;
 
-    alloc_mspr(mspr, cfg_t);
+	if (alloc_gSprite(gSprite, cfg_t) == NULL)
+		return 1;
 
-    return 0;
+	return 0;
 }
 
 void
-unload_map(qik_map *map, qik_usr *usr, qik_mtex *mtex, qik_mspr *mspr, config_t *cfg_t)
+unload_map(Map *map, User *user, SDL_Surface **gSurface, Sprite *gSprite, config_t *cfg_t)
 {
-    free_mtex(mtex);
+	free_gSurface(gSurface);
 
-    free_mspr(mspr);
+	free(gSprite);
 
-    free_map(map);
+	free_map(map);
 
-    free_usr(usr);
+	free_user(user);
 
-    config_destroy(cfg_t);
+	config_destroy(cfg_t);
 
-    return;
+	return;
 }
